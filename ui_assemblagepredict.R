@@ -1,10 +1,10 @@
 AssemPredPanel = sidebarLayout(
   sidebarPanel = sidebarPanel(id="aspredsidepanel",width=3,
                               
-                        fluidRow(column(3, div(style = "width: 82px;", disabled(textInput("drainage_area", HTML("DA(km<sup>2</sup>)"), value = "0")))),
-                            column(3, div(style = "width: 82px;", disabled(textInput("slope", "Slope(%)", value = "0")))),
-                            column(3, div(style = "width: 82px;", disabled(textInput("elevation", "Elev(m)", value = "0")))),
-                            column(3, div(style = "width: 82px;", disabled(textInput("mean_width", "Width(m)", value = "0"))))),
+                        fluidRow(column(3, div(style = "width: 82px;", disabled(textInput("drainage_area", HTML("DA (km<sup>2</sup>)"), value = "0")))),
+                            column(3, div(style = "width: 82px;", disabled(textInput("slope", "Slope (%)", value = "0")))),
+                            column(3, div(style = "width: 82px;", disabled(textInput("elevation", "Elev (m)", value = "0")))),
+                            column(3, div(style = "width: 82px;", disabled(textInput("mean_width", "Width (m)", value = "0"))))),
                         fluidRow(column(3, div(class = "custom-input", numericInput("watershed_integrity", "IWI", value = 0, min = 0, max=1, step=0.01))),
                             column(3, div(class = "custom-input", numericInput("benthic_invert", "BMMI", value = 0, min = 0, max=1, step=0.01))),
                             column(6, selectInput("prob_thresh",label="Probability Threshold",choices = c("P1","Ave(P0,P1)","P1 - 1SD", "P1 - 2SD", "P0"),

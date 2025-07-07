@@ -2443,6 +2443,12 @@ server= function(input,output,session) {
         
         data = filtered_STREAM_fishes()
         
+        print(data)
+        
+        data[,5] = ifelse(data[,5] > 1, round(data[,5], 1), data[,5])
+        
+        colnames(data)[c(5,7)] = c("Mean Weight (g)", "Thin Adjustment")
+        
         data$`Biomass (kg)` = NA
         data$Count = NA
         
@@ -2460,6 +2466,7 @@ server= function(input,output,session) {
               dom='t',
               autoWidth = T,
               pageLength = 200,
+              columnDefs = list(list(width = '110px', targets = c(2:6)),list(className = 'dt-center', targets = c(2:6))),
               scrollY = T,
               initComplete = JS(
                 "function(settings, json) {",
