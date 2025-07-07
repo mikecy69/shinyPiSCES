@@ -16,7 +16,7 @@ AssemPredPanel = sidebarLayout(
                                 column(6, div(style = "text-align: center;", actionButton("remove_fish", "Remove Selections")))),
                         fluidRow(column(2),(column(8,uiOutput("color_info")))),
                         tags$hr(style = "border-color: #2c3e50; margin-top: 4px; margin-bottom: 4px;"),
-                        fluidRow(column(12,div(style = "text-align: center;", textOutput("SHAP_text")))),
+                        fluidRow(column(12,div(style = "text-align: center;", uiOutput("SHAP_text")))),
                         fluidRow(DT::dataTableOutput('shap_values'))),
   
   mainPanel = mainPanel(

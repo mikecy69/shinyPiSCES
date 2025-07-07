@@ -14,7 +14,7 @@ fish_tribes = list(
   "Darters" = c("Etheostoma", "Logperch", "Other Darter"),
   "Minnows" = c("Chub", "Dace", "Shiner", "Stoneroller", "Other Minnow"),
   "Suckers" = c("Catostomus", "Redhorse", "Other Sucker"),
-  "Others" = c(
+  "Other - Primary" = c(
     "Black Bass",
     "Carp",
     "Catfish",

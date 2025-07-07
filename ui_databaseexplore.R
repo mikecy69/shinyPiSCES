@@ -42,10 +42,10 @@ DataExplPanel = sidebarLayout(
               ))
             ),
             
-            fluidRow(column(6,sliderInput(inputId = "ubiquity_slider",label = "Ubiquity",min = 0,max = 100,value = c(0,100),step=5)),
-                column(6,sliderInput(inputId = "extent_slider",label = "Extent",min = 0,max = 100,value = c(0,100),step=5))),
+            fluidRow(column(6,sliderInput(inputId = "ubiquity_slider",label = "Ubiquity",min = 0,max = 75,value = c(0,75),step=2)),
+                column(6,sliderInput(inputId = "extent_slider",label = "Extent",min = 0,max = 80,value = c(0,80),step=2))),
             
-            fluidRow(column(6,sliderInput(inputId = "tolerance_slider",label = "Tolerance",min = 0,max = 100,value = c(0,100),step=5)),
+            fluidRow(column(6,sliderInput(inputId = "tolerance_slider",label = "Tolerance",min = 0,max = 95,value = c(0,95),step=2)),
                 column(6,sliderInput(inputId = "robustness_slider",label = "Robustness",min = 0,max = 50,value = c(0,50),step=2))),
             
             fluidRow(column(4,div(class = "centered-select",class="big-select",selectizeInput("system_choice",label="System",choices = systems, selected = NULL,

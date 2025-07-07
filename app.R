@@ -1485,9 +1485,9 @@ server= function(input,output,session) {
     updateSliderInput(session, "mean_length", value = c(0,40))
     updateSliderInput(session, "max_TL", value = c(0,200))
     updateSliderInput(session, "girth", value = c(0,1))
-    updateSliderInput(session, "ubiquity_slider", value = c(0,100))
-    updateSliderInput(session, "extent_slider", value = c(0,100))
-    updateSliderInput(session, "tolerance_slider", value = c(0,100))
+    updateSliderInput(session, "ubiquity_slider", value = c(0,75))
+    updateSliderInput(session, "extent_slider", value = c(0,80))
+    updateSliderInput(session, "tolerance_slider", value = c(0,95))
     updateSliderInput(session, "robustness_slider", value = c(0,50))
     
     output$explore_results = NULL
@@ -1497,7 +1497,35 @@ server= function(input,output,session) {
   })
   
   observeEvent(input$unit_toggle, ignoreInit = T, {
+    
     units(input$unit_toggle)
+    
+    if (input$unit_toggle == "english") {
+      
+      new_weight = (A()*(input$fish_length * 2.54)^B())*0.002205
+      
+      if (new_weight > 1) {
+        new_weight = round(new_weight, 1)
+      } else {
+        new_weight = round(new_weight, 2)
+      }
+      
+    } else {
+      
+      new_weight = A()*input$fish_length^B()
+      
+      if (new_weight > 1) {
+        new_weight = round(new_weight, 1)
+      } else {
+        new_weight = round(new_weight, 2)
+      }
+    }
+    
+    updateNumericInput(session, "fish_weight", value = new_weight)
+    
+    fishy_weight(new_weight)
+    fishy_length(input$fish_length)
+    
   })
   
   observeEvent(input$explore_results_rows_selected, {
@@ -1755,13 +1783,13 @@ server= function(input,output,session) {
       })
       
       search_string = paste(filtered_fish_props$Genus,filtered_fish_props$Species)
-      google_link = sprintf('<a href="https://www.google.com/search?tbm=isch&q=%s" target="_blank">Google Images</a>',URLencode(search_string))
       wiki_link = sprintf('<a href="https://en.wikipedia.org/wiki/%s" target="_blank">Wikipedia</a>',URLencode(search_string))
+      google_link = sprintf('<a href="https://www.google.com/search?tbm=isch&q=%s" target="_blank">Google Images</a>',URLencode(search_string))
       
       output$species_links = renderUI({
         tagList(
-          div(style = "display: inline-block; margin-right: 20px;", HTML(google_link)),
-          div(style = "display: inline-block;", HTML(wiki_link))
+          div(style = "display: inline-block; margin-right: 20px;", HTML(wiki_link)),
+          div(style = "display: inline-block;", HTML(google_link))
         )
       })
     }
@@ -2035,6 +2063,8 @@ server= function(input,output,session) {
         selected_modelstats = modelstats[, c("Model", CritCol)]
         fish_data = merge(fish_data3, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
         
+        print(fish_data)
+        
         STREAM_fishes(fish_data)
         
         new_fish_data = fish_data
@@ -2069,7 +2099,7 @@ server= function(input,output,session) {
               pageLength = 200,
               scrollY = TRUE,
               columnDefs = list(
-                list(visible = FALSE, targets = c(2:8,11)),
+                list(visible = FALSE, targets = c(0,3:8,11)),
                 list(width = '80px', targets = 9),
                 list(width = '80px', targets = 10),
                 list(className = 'dt-center', targets = 9)
@@ -2094,7 +2124,7 @@ server= function(input,output,session) {
         
         output$filtered_fish = DT::renderDataTable(server = T, {
           datatable(
-            filtered_fish_data[,1:2],
+            filtered_fish_data[,2:3],
             rownames = F,
             selection = list(
               selected = NULL,
@@ -2177,7 +2207,7 @@ server= function(input,output,session) {
           pageLength = 200,
           scrollY = TRUE,
           columnDefs = list(
-            list(visible = FALSE, targets = c(2:8,11)),
+            list(visible = FALSE, targets = c(0,3:8,11)),
             list(width = '80px', targets = 9),
             list(width = '80px', targets = 10),
             list(className = 'dt-center', targets = 9)
@@ -2202,7 +2232,7 @@ server= function(input,output,session) {
     
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
-        filtered_fish_data[,1:2],
+        filtered_fish_data[,2:3],
         rownames = F,
         selection = list(
           selected = NULL,
@@ -2275,7 +2305,7 @@ server= function(input,output,session) {
           pageLength = 200,
           scrollY = TRUE,
           columnDefs = list(
-            list(visible = FALSE, targets = c(2:8,11)),
+            list(visible = FALSE, targets = c(0,3:8,11)),
             list(width = '80px', targets = 9),
             list(width = '80px', targets = 10),
             list(className = 'dt-center', targets = 9)
@@ -2300,7 +2330,7 @@ server= function(input,output,session) {
     
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
-        filtered_temp[,1:2],
+        filtered_temp[,2:3],
         rownames = F,
         selection = list(
           selected = NULL,
@@ -2335,7 +2365,7 @@ server= function(input,output,session) {
     
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
-        new_filtered[,1:2],
+        new_filtered[,2:3],
         rownames = F,
         selection = list(
           selected = NULL,
@@ -2375,7 +2405,7 @@ server= function(input,output,session) {
     
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
-        updated_filtered[,1:2],
+        updated_filtered[,2:3],
         rownames = F,
         selection = list(
           selected = NULL,
@@ -2418,7 +2448,7 @@ server= function(input,output,session) {
         
         output$fish_community = DT::renderDataTable(server = T, {
           datatable(
-            data[,c(1:2,4:6,ncol(data)-1,ncol(data))],
+            data[,c(2:3,5:7,ncol(data)-1,ncol(data))],
             rownames = F,
             selection = list(
               selected = NULL,
@@ -2466,11 +2496,11 @@ server= function(input,output,session) {
       
       fish_name = STREAM_fishes()[last_affected, "Common Name"]
       
-      output$SHAP_text = renderText({
-        HTML(paste("Model Information for ", fish_name))
+      output$SHAP_text = renderUI({
+        HTML(paste("Model Information for ", "<b><i>", fish_name, "</i></b>"))
       })
       
-      model_num = as.numeric(STREAM_fishes()[last_affected, "ModelID"])
+      model_num = as.numeric(STREAM_fishes()[last_affected, "Model_ID"])
       
       if (!is.na(model_num) && !is.null(model_num)) {
         
