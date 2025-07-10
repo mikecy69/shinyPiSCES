@@ -12,8 +12,8 @@ AssemPredPanel = sidebarLayout(
 
                         fluidRow(column(12, div(style = "text-align: center;", actionButton("update_probs", "Update Predicted Prob")))),
                         tags$hr(style = "border-color: #2c3e50; margin-top: 4px; margin-bottom: 4px;"),
-                        fluidRow(column(6, div(style = "text-align: center;", actionButton("add_fish", "Add Selections"))),
-                                column(6, div(style = "text-align: center;", actionButton("remove_fish", "Remove Selections")))),
+                        fluidRow(column(6, div(style = "text-align: center;", disabled(actionButton("add_fish", "Add Selections")))),
+                                column(6, div(style = "text-align: center;", disabled(actionButton("remove_fish", "Remove Selections"))))),
                         fluidRow(column(2),(column(8,uiOutput("color_info")))),
                         tags$hr(style = "border-color: #2c3e50; margin-top: 4px; margin-bottom: 4px;"),
                         fluidRow(column(12,div(style = "text-align: center;", uiOutput("SHAP_text")))),
@@ -38,12 +38,7 @@ AssemPredPanel = sidebarLayout(
                          tags$style(type = "text/css", "#stream_map {height: calc(100vh - 110px) !important;}")),
                 tabPanel("Fish Assemblage Filtering",fluidRow(
                   column(7,align = "left",DT::dataTableOutput('fish_assem')),
-                  column(5,align = "left",DT::dataTableOutput('filtered_fish')))),
-                tabPanel("Community Biomass Estimation",
-                         
-                         fluidRow(numericInput(inputId = "biomass",label = "Biomass (kg)",value = 50,min = 5),
-                               numericInput(inputId = "fish_count",label = "Fish Count",value = 1000,min = 10),
-                               div(style = "text-align: center;",actionButton(inputId = "comm_calc",label = "Calculate"))),
-                        
+                  column(5,align = "left",h4("Proposed Community"),DT::dataTableOutput('filtered_fish')))),
+                tabPanel("Community Biomass Estimation",uiOutput("biomass_estimation_ui"),
                          fluidRow(column(12,DT::dataTableOutput('fish_community'))))))
 )

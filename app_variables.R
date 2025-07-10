@@ -78,6 +78,7 @@ fishy_length = reactiveVal(10)
 fishy_weight = reactiveVal(6)
 HUC_fishes = reactiveVal()
 STREAM_fishes = reactiveVal()
+EST_FISH_COMM = reactiveVal()
 filtered_STREAM_fishes = reactiveVal()
 display = reactiveVal("none")
 

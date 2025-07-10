@@ -77,7 +77,7 @@ ui = fluidPage(
       text-align: center !important;
     }
     
-    #update_probs, #add_fish, #remove_fish, #comm_calc {
+    #update_probs, #add_fish, #remove_fish, #biomass_calc, #count_calc {
       display: block;
       margin: 0 auto;
       height: 40px !important;
@@ -86,21 +86,8 @@ ui = fluidPage(
       box-sizing: border-box;
     }
     
-    #comm_calc {
-      display: block;
-      height: 40px !important;
-      border-radius: 15px;
-      line-height: 15px;
-      box-sizing: border-box;
-    }
-    
-    #fish_length, #fish_weight, #calc_lw {
+    #fish_length, #fish_weight, #calc_lw, #fish_count, #biomass {
       height: 35px;
-    }
-    
-    #fish_count, #biomass {
-      height: 35px;
-      width: 100px;
     }
     
     .irs-grid-text, .irs-min, .irs-max, .irs-single {
@@ -152,11 +139,6 @@ ui = fluidPage(
     .centered-select label {
       text-align: center;
       width: 100%;
-    }
-    
-    .inline-elements > div {
-      display: inline-block;
-      margin-right: 10px;
     }
     
     .tooltip {
@@ -279,6 +261,18 @@ ui = fluidPage(
       display: flex;
       align-items: center;
     }
+    
+    .custom-inline-elements {
+      display: flex;
+      align-items: center;
+    }
+    
+    .custom-action-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
   "))),
   
   #div(id = "loading", tags$img(src = "https://jeroen.github.io/images/banana.gif")),

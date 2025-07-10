@@ -2063,29 +2063,33 @@ server= function(input,output,session) {
         selected_modelstats = modelstats[, c("Model", CritCol)]
         fish_data = merge(fish_data3, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
         
-        print(fish_data)
+        fish_data = fish_data[order(fish_data[, 2]), ]
+        colnames(fish_data)[ncol(fish_data)] = input$prob_thresh
         
         STREAM_fishes(fish_data)
         
-        new_fish_data = fish_data
+        filtered_fish_data  = fish_data[Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width &
+                                          (fish_data$Predicted_Prob > fish_data[[input$prob_thresh]] | is.na(fish_data[[input$prob_thresh]])),]
         
-        colnames(new_fish_data)[ncol(new_fish_data)] = input$prob_thresh
+        filtered_STREAM_fishes(filtered_fish_data)
         
-        new_fish_data$row_color = ifelse(
-          !is.na(new_fish_data[[input$prob_thresh]]) & new_fish_data$Predicted_Prob < new_fish_data[[input$prob_thresh]] &
-            (Mean_Width() < new_fish_data$Lower_Width | Mean_Width() > new_fish_data$Upper_Width), "gray",
+        fish_data$row_color = ifelse(
+          !is.na(fish_data[[input$prob_thresh]]) & fish_data$Predicted_Prob < fish_data[[input$prob_thresh]] &
+            (Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width), "gray",
           ifelse(
-            !is.na(new_fish_data[[input$prob_thresh]]) & new_fish_data$Predicted_Prob < new_fish_data[[input$prob_thresh]], "yellow",
+            !is.na(fish_data[[input$prob_thresh]]) & fish_data$Predicted_Prob < fish_data[[input$prob_thresh]], "yellow",
             ifelse(
-              Mean_Width() < new_fish_data$Lower_Width | Mean_Width() > new_fish_data$Upper_Width, "lightgray",
+              Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width, "lightgray",
               "lightgreen"
             )
           )
         )
         
+        fish_data$Included = ifelse(fish_data[,2] %in% filtered_fish_data[,2], "Yes", "No")
+        
         output$fish_assem = DT::renderDataTable(server = TRUE, {
           datatable(
-            new_fish_data,
+            fish_data,
             rownames = FALSE,
             selection = list(
               selected = NULL,
@@ -2100,9 +2104,8 @@ server= function(input,output,session) {
               scrollY = TRUE,
               columnDefs = list(
                 list(visible = FALSE, targets = c(0,3:8,11)),
-                list(width = '80px', targets = 9),
-                list(width = '80px', targets = 10),
-                list(className = 'dt-center', targets = 9)
+                list(width = '80px', targets = c(9,10,12)),
+                list(className = 'dt-center', targets = c(9,10,12))
               ),
               initComplete = JS(
                 "function(settings, json) {",
@@ -2112,16 +2115,11 @@ server= function(input,output,session) {
               )
             )
           ) |>
-            formatStyle(columns = names(new_fish_data),target = 'row',backgroundColor = styleEqual(unique(new_fish_data$row_color), unique(new_fish_data$row_color))) |>
+            formatStyle(columns = names(fish_data),target = 'row',backgroundColor = styleEqual(unique(fish_data$row_color), unique(fish_data$row_color))) |>
             formatStyle(0, target= 'row', lineHeight='25%') |>
-            formatStyle(columns = c(9,10),`text-align` = 'center')
+            formatStyle(columns = c(9,10,12),`text-align` = 'center')
         })
-        
-        filtered_fish_data  = fish_data[Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width &
-                                          (fish_data$Predicted_Prob > fish_data[[CritCol]] | is.na(fish_data[[CritCol]])),]
-        
-        filtered_STREAM_fishes(filtered_fish_data)
-        
+
         output$filtered_fish = DT::renderDataTable(server = T, {
           datatable(
             filtered_fish_data[,2:3],
@@ -2167,29 +2165,37 @@ server= function(input,output,session) {
                      "P1 - 2SD" = "Crit_2SD",
                      "P0" = "Crit_P0")
     
-    new_data = STREAM_fishes()[,-ncol(STREAM_fishes())]
+    data = STREAM_fishes()[,-ncol(STREAM_fishes())]
     
     selected_modelstats = modelstats[, c("Model", CritCol)]
-    new_data = merge(new_data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
+    data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
     
-    data = new_data
-    colnames(data)[ncol(data)] = CritCol
+    colnames(data)[ncol(data)] = input$prob_thresh
     
     data$Predicted_Prob = round(calculate_probs(as.numeric(data$Model_ID), WA(),Slope(),Elev(),IWI(),BMMI()),3)
+    
+    data = data[order(data[, 2]), ]
     
     STREAM_fishes(data)
     
     data$row_color = ifelse(
-      !is.na(data[[CritCol]]) & data$Predicted_Prob < data[[CritCol]] &
+      !is.na(data[[input$prob_thresh]]) & data$Predicted_Prob < data[[input$prob_thresh]] &
         (Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width), "gray",
       ifelse(
-        !is.na(data[[CritCol]]) & data$Predicted_Prob < data[[CritCol]], "yellow",
+        !is.na(data[[input$prob_thresh]]) & data$Predicted_Prob < data[[input$prob_thresh]], "yellow",
         ifelse(
           Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width, "lightgray",
           "lightgreen"
         )
       )
     )
+    
+    filtered_fish_data  = data[Mean_Width() >= data$Lower_Width & Mean_Width() <= data$Upper_Width &
+                                 (data$Predicted_Prob > data[[input$prob_thresh]] | is.na(data[[input$prob_thresh]])),]
+    
+    filtered_STREAM_fishes(filtered_fish_data)
+    
+    data$Included = ifelse(data[,2] %in% filtered_fish_data[,2], "Yes", "No")
     
     output$fish_assem = DT::renderDataTable(server = TRUE, {
       datatable(
@@ -2208,9 +2214,8 @@ server= function(input,output,session) {
           scrollY = TRUE,
           columnDefs = list(
             list(visible = FALSE, targets = c(0,3:8,11)),
-            list(width = '80px', targets = 9),
-            list(width = '80px', targets = 10),
-            list(className = 'dt-center', targets = 9)
+            list(width = '80px', targets = c(9,10,12)),
+            list(className = 'dt-center', targets = c(9,10,12))
           ),
           initComplete = JS(
             "function(settings, json) {",
@@ -2222,14 +2227,9 @@ server= function(input,output,session) {
       ) |>
         formatStyle(columns = names(data),target = 'row',backgroundColor = styleEqual(unique(data$row_color), unique(data$row_color))) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
-        formatStyle(columns = c(9,10),`text-align` = 'center')
+        formatStyle(columns = c(9,10,12),`text-align` = 'center')
     })
-    
-    filtered_fish_data  = data[Mean_Width() >= data$Lower_Width & Mean_Width() <= data$Upper_Width &
-      (data$Predicted_Prob > data[[CritCol]] | is.na(data[[CritCol]])),]
-    
-    filtered_STREAM_fishes(filtered_fish_data)
-    
+
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
         filtered_fish_data[,2:3],
@@ -2269,29 +2269,40 @@ server= function(input,output,session) {
                      "P1 - 2SD" = "Crit_2SD",
                      "P0" = "Crit_P0")
     
-    temp_data = STREAM_fishes()[,-ncol(STREAM_fishes())]
+    data = STREAM_fishes()[,-ncol(STREAM_fishes())]
     
     selected_modelstats = modelstats[, c("Model", CritCol)]
-      temp_data = merge(temp_data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
+      data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
     
-    temp_table_data = temp_data
-    colnames(temp_table_data)[ncol(temp_table_data)] = CritCol
+    temp_data = data
+    colnames(temp_data)[ncol(temp_data)] = input$prob_thresh
     
-    temp_table_data$row_color = ifelse(
-      !is.na(temp_table_data[[CritCol]]) & temp_table_data$Predicted_Prob < temp_table_data[[CritCol]] &
-        (Mean_Width() < temp_table_data$Lower_Width | Mean_Width() > temp_table_data$Upper_Width), "gray",
+    temp_data = temp_data[order(temp_data[, 2]), ]
+    
+    STREAM_fishes(temp_data)
+    
+    temp_data$row_color = ifelse(
+      !is.na(temp_data[[input$prob_thresh]]) & temp_data$Predicted_Prob < temp_data[[input$prob_thresh]] &
+        (Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width), "gray",
       ifelse(
-        !is.na(temp_table_data[[CritCol]]) & temp_table_data$Predicted_Prob < temp_table_data[[CritCol]], "yellow",
+        !is.na(temp_data[[input$prob_thresh]]) & temp_data$Predicted_Prob < temp_data[[input$prob_thresh]], "yellow",
         ifelse(
-          Mean_Width() < temp_table_data$Lower_Width | Mean_Width() > temp_table_data$Upper_Width, "lightgray",
+          Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width, "lightgray",
           "lightgreen"
         )
       )
     )
     
+    filtered_temp = temp_data[Mean_Width() >= temp_data$Lower_Width & Mean_Width() <= temp_data$Upper_Width &
+                                (temp_data$Predicted_Prob > temp_data[[input$prob_thresh]] | is.na(temp_data[[input$prob_thresh]])),]
+    
+    filtered_STREAM_fishes(filtered_temp)
+    
+    temp_data$Included = ifelse(temp_data[,2] %in% filtered_temp[,2], "Yes", "No")
+    
     output$fish_assem = DT::renderDataTable(server = TRUE, {
       datatable(
-        temp_table_data,
+        temp_data,
         rownames = FALSE,
         selection = list(
           selected = NULL,
@@ -2306,9 +2317,8 @@ server= function(input,output,session) {
           scrollY = TRUE,
           columnDefs = list(
             list(visible = FALSE, targets = c(0,3:8,11)),
-            list(width = '80px', targets = 9),
-            list(width = '80px', targets = 10),
-            list(className = 'dt-center', targets = 9)
+            list(width = '80px', targets = c(9,10,12)),
+            list(className = 'dt-center', targets = c(9,10,12))
           ),
           initComplete = JS(
             "function(settings, json) {",
@@ -2318,16 +2328,11 @@ server= function(input,output,session) {
           )
         )
       ) |>
-        formatStyle(columns = names(temp_table_data),target = 'row',backgroundColor = styleEqual(unique(temp_table_data$row_color), unique(temp_table_data$row_color))) |>
+        formatStyle(columns = names(temp_data),target = 'row',backgroundColor = styleEqual(unique(temp_data$row_color), unique(temp_data$row_color))) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
-        formatStyle(columns = c(9,10),`text-align` = 'center')
+        formatStyle(columns = c(9,10,12),`text-align` = 'center')
     })
-    
-    filtered_temp = temp_data[Mean_Width() >= temp_data$Lower_Width & Mean_Width() <= temp_data$Upper_Width &
-      (temp_data$Predicted_Prob > temp_data[[CritCol]] | is.na(temp_data[[CritCol]])),]
-    
-    filtered_STREAM_fishes(filtered_temp)
-    
+
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
         filtered_temp[,2:3],
@@ -2363,6 +2368,55 @@ server= function(input,output,session) {
     
     filtered_STREAM_fishes(new_filtered)
     
+    fishes = STREAM_fishes()
+    
+    fishes$row_color = ifelse(
+      !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]] &
+        (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "gray",
+      ifelse(
+        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "yellow",
+        ifelse(
+          Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "lightgray",
+          "lightgreen"
+        )
+      )
+    )
+    
+    fishes$Included = ifelse(fishes[,2] %in% new_filtered[,2], "Yes", "No")
+    
+    output$fish_assem = DT::renderDataTable(server = TRUE, {
+      datatable(
+        fishes,
+        rownames = FALSE,
+        selection = list(
+          selected = NULL,
+          target = "row",
+          mode = "multiple"
+        ),
+        editable = FALSE,
+        options = list(
+          dom = 't',
+          autoWidth = TRUE,
+          pageLength = 200,
+          scrollY = TRUE,
+          columnDefs = list(
+            list(visible = FALSE, targets = c(0,3:8,11)),
+            list(width = '80px', targets = c(9,10,12)),
+            list(className = 'dt-center', targets = c(9,10,12))
+          ),
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
+            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+            "}"
+          )
+        )
+      ) |>
+        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color))) |>
+        formatStyle(0, target= 'row', lineHeight='25%') |>
+        formatStyle(columns = c(9,10,12),`text-align` = 'center')
+    })
+    
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
         new_filtered[,2:3],
@@ -2388,6 +2442,8 @@ server= function(input,output,session) {
       ) |>
         formatStyle(0, target= 'row', lineHeight='25%')
     })
+    
+    disable("remove_fish")
   })
   
   observeEvent(input$add_fish, ignoreInit=T, {
@@ -2400,8 +2456,57 @@ server= function(input,output,session) {
       anti_join(filtered_STREAM_fishes(), by = c("Scientific Name" = "Scientific Name"))
     
     updated_filtered = bind_rows(filtered_STREAM_fishes(), rows_to_add)
-    
+    updated_filtered = updated_filtered[order(updated_filtered[, 2]), ]
     filtered_STREAM_fishes(updated_filtered)
+    
+    fishes = STREAM_fishes()
+    
+    fishes$row_color = ifelse(
+      !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]] &
+        (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "gray",
+      ifelse(
+        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "yellow",
+        ifelse(
+          Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "lightgray",
+          "lightgreen"
+        )
+      )
+    )
+    
+    fishes$Included = ifelse(fishes[,2] %in% updated_filtered[,2], "Yes", "No")
+    
+    output$fish_assem = DT::renderDataTable(server = TRUE, {
+      datatable(
+        fishes,
+        rownames = FALSE,
+        selection = list(
+          selected = NULL,
+          target = "row",
+          mode = "multiple"
+        ),
+        editable = FALSE,
+        options = list(
+          dom = 't',
+          autoWidth = TRUE,
+          pageLength = 200,
+          scrollY = TRUE,
+          columnDefs = list(
+            list(visible = FALSE, targets = c(0,3:8,11)),
+            list(width = '80px', targets = c(9,10,12)),
+            list(className = 'dt-center', targets = c(9,10,12))
+          ),
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
+            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+            "}"
+          )
+        )
+      ) |>
+        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color))) |>
+        formatStyle(0, target= 'row', lineHeight='25%') |>
+        formatStyle(columns = c(9,10,12),`text-align` = 'center')
+    })
     
     output$filtered_fish = DT::renderDataTable(server = T, {
       datatable(
@@ -2431,6 +2536,104 @@ server= function(input,output,session) {
     
     proxy = dataTableProxy("fish_assem")
     selectRows(proxy, NULL)
+    previous_SHAP_selection(NULL)
+    disable("add_fish")
+    
+  })
+  
+  observeEvent(input$fish_assem_rows_selected,  ignoreInit=T, {
+    
+    if (is.null(input$fish_assem_rows_selected) || length(input$fish_assem_rows_selected) == 0) {
+      disable("add_fish")
+      previous_SHAP_selection(NULL)
+      
+    } else {
+      
+      current_selection = input$fish_assem_rows_selected
+      last_selected = setdiff(current_selection, previous_SHAP_selection())
+      last_deselected = setdiff(previous_SHAP_selection(), current_selection)
+      
+      if (length(last_selected) > 0) {
+        last_affected = last_selected
+      } else if (length(last_deselected) > 0) {
+        last_affected = last_deselected
+      } else {
+        last_affected = NULL
+      }
+      
+      previous_SHAP_selection(current_selection)
+      
+      if (!is.null(last_affected)) {
+        
+        fish_name = STREAM_fishes()[last_affected, "Common Name"]
+        
+        output$SHAP_text = renderUI({
+          HTML(paste("Model Information for ", "<b><i>", fish_name, "</i></b>"))
+        })
+        
+        model_num = as.numeric(STREAM_fishes()[last_affected, "Model_ID"])
+        
+        if (!is.na(model_num) && !is.null(model_num)) {
+          
+          values = round(as.numeric(modelstats[modelstats$Model == model_num, c("WA_SHAP", "Slope_SHAP", "Elev_SHAP", "IWI_SHAP", "BMMI_SHAP")]), 3)
+          
+          dataframe = data.frame(Feature = c("Drainage Area", "Slope", "Elevation", "IWI", "BMMI"),`SHAP Value` = values, check.names = FALSE)
+          
+          output$shap_values = DT::renderDataTable(server = T, {
+            datatable(
+              dataframe,
+              rownames = F,
+              selection = 'none',
+              editable = F,
+              options = list(
+                dom='t',
+                autoWidth = T,
+                pageLength = 5,
+                scrollY = T,
+                columnDefs = list(
+                  list(className = 'dt-center', targets = c(0,1))
+                ),
+                initComplete = JS(
+                  "function(settings, json) {",
+                  "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
+                  "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+                  "}"
+                )
+              )
+            ) |>
+              formatStyle(columns = c(0,1),`text-align` = 'center')
+          })
+        } else {
+          output$shap_values = NULL
+        }
+      } else {
+        output$shap_values = NULL
+      }
+      
+      enable("add_fish")
+    }
+  }, ignoreNULL = FALSE)
+  
+  observeEvent(input$filtered_fish_rows_selected,  ignoreInit=T, {
+    
+    if (is.null(input$filtered_fish_rows_selected) || length(input$filtered_fish_rows_selected) == 0) {
+      disable("remove_fish")
+      return()
+    }
+    
+    enable("remove_fish")
+    
+  }, ignoreNULL=FALSE)
+  
+  output$biomass_estimation_ui = renderUI({
+    fluidRow(
+      div(class = "custom-inline-elements",
+          div(numericInput(inputId = "fish_count", label = "Fish Count", value = 5000, min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+          div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+          div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = 50, min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
+          div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+      )
+    )
   })
   
   observeEvent(input$assemblage_tabs, ignoreInit = T, {
@@ -2443,15 +2646,15 @@ server= function(input,output,session) {
         
         data = filtered_STREAM_fishes()
         
-        print(data)
-        
         data[,5] = ifelse(data[,5] > 1, round(data[,5], 1), data[,5])
         
         colnames(data)[c(5,7)] = c("Mean Weight (g)", "Thin Adjustment")
         
-        data$`Biomass (kg)` = NA
         data$Count = NA
+        data$`Biomass (kg)` = NA
         
+        EST_FISH_COMM(data)
+
         output$fish_community = DT::renderDataTable(server = T, {
           datatable(
             data[,c(2:3,5:7,ncol(data)-1,ncol(data))],
@@ -2466,7 +2669,7 @@ server= function(input,output,session) {
               dom='t',
               autoWidth = T,
               pageLength = 200,
-              columnDefs = list(list(width = '110px', targets = c(2:6)),list(className = 'dt-center', targets = c(2:6))),
+              columnDefs = list(list(width = '125px', targets = c(2:6)),list(className = 'dt-center', targets = c(2:6))),
               scrollY = T,
               initComplete = JS(
                 "function(settings, json) {",
@@ -2483,65 +2686,128 @@ server= function(input,output,session) {
     }
   })
   
-  observeEvent(input$fish_assem_rows_selected,  ignoreInit=T, {
-    
-    current_selection = input$fish_assem_rows_selected
-    last_selected = setdiff(current_selection, previous_SHAP_selection())
-    last_deselected = setdiff(previous_SHAP_selection(), current_selection)
-    
-    if (length(last_selected) > 0) {
-      last_affected = last_selected
-    } else if (length(last_deselected) > 0) {
-      last_affected = last_deselected
-    } else {
-      last_affected = NULL
-    }
-    
-    previous_SHAP_selection(current_selection)
-    
-    if (!is.null(last_affected)) {
-      
-      fish_name = STREAM_fishes()[last_affected, "Common Name"]
-      
-      output$SHAP_text = renderUI({
-        HTML(paste("Model Information for ", "<b><i>", fish_name, "</i></b>"))
-      })
-      
-      model_num = as.numeric(STREAM_fishes()[last_affected, "Model_ID"])
-      
-      if (!is.na(model_num) && !is.null(model_num)) {
-        
-        values = round(as.numeric(modelstats[modelstats$Model == model_num, c("WA_SHAP", "Slope_SHAP", "Elev_SHAP", "IWI_SHAP", "BMMI_SHAP")]), 3)
-        
-        dataframe = data.frame(Feature = c("Drainage Area", "Slope", "Elevation", "IWI", "BMMI"),`SHAP Value` = values, check.names = FALSE)
-        
-        output$shap_values = DT::renderDataTable(server = T, {
-          datatable(
-            dataframe,
-            rownames = F,
-            selection = 'none',
-            editable = F,
-            options = list(
-              dom='t',
-              autoWidth = T,
-              pageLength = 5,
-              scrollY = T,
-              initComplete = JS(
-                "function(settings, json) {",
-                "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
-                "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
-                "}"
-              )
-            )
-          )
-        })
-      } else {
-        output$shap_values = NULL
-      }
-    } else {
-      output$shap_values = NULL
-    }
-  }, ignoreNULL = FALSE)
+  observeEvent(input$biomass_calc, ignoreInit=T, {
 
+    data = EST_FISH_COMM()
+
+    total_biomass = as.numeric(input$biomass)
+
+    species_abund = mapply(function(W, b, d) {
+      W^(-(b - d))
+    }, data$`Mean Weight (g)`, data$Thinning, data$`Thin Adjustment`)
+
+    summed_abund = sum(species_abund)
+
+    rel_abund = species_abund / summed_abund
+
+    error = 0
+    total_count = 1000
+
+    while (error < 0.98 || error > 1.02) {
+
+      species_count = round(rel_abund * total_count)
+
+      species_biomass = (species_count*data$`Mean Weight (g)`) / 1000
+
+      summed_biomass = sum(species_biomass)
+
+      error = total_biomass / summed_biomass
+      total_count = error * total_count
+    }
+
+    data$Count = round(species_count,1)
+    data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass,3),ifelse(species_biomass < 1,round(species_biomass,2),round(species_biomass,1)))
+
+    summed_count = sum(species_count)
+    updateNumericInput(session, "fish_count", value = summed_count)
+
+    EST_FISH_COMM(data)
+
+    output$fish_community = DT::renderDataTable(server = T, {
+      datatable(
+        data[,c(2:3,5:7,ncol(data)-1,ncol(data))],
+        rownames = F,
+        selection = list(
+          selected = NULL,
+          target = "row",
+          mode = "multiple"
+        ),
+        editable = F,
+        options = list(
+          dom='t',
+          autoWidth = T,
+          pageLength = 200,
+          columnDefs = list(list(width = '125px', targets = c(2:6)),list(className = 'dt-center', targets = c(2:6))),
+          scrollY = T,
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff','text-align': 'center'});",
+            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+            "}"
+          )
+        )
+      ) |>
+        formatStyle(0, target= 'row', lineHeight='25%') |>
+        formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
+    })
+  })
+  
+  observeEvent(input$count_calc, ignoreInit=T, {
+
+    data = EST_FISH_COMM()
+
+    species_abund = mapply(function(W, b, d) {
+      W^(-(b - d))
+    }, data$`Mean Weight (g)`, data$Thinning, data$`Thin Adjustment`)
+
+    summed_abund = sum(species_abund)
+    rel_abund = species_abund / summed_abund
+    species_count = rel_abund * input$fish_count
+    species_biomass = (species_count * data$`Mean Weight (g)`) / 1000
+    summed_biomass = sum(species_biomass)
+
+    if (summed_biomass < 0.1) {
+      summed_biomass = round(summed_biomass, 3)
+    } else if (summed_biomass < 1) {
+      summed_biomass = round(summed_biomass, 2)
+    } else {
+      summed_biomass = round(summed_biomass, 1)
+    }
+
+    updateNumericInput(session, "biomass", value = summed_biomass)
+
+    data$Count = round(species_count,1)
+    data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass, 3),ifelse(species_biomass < 1,round(species_biomass, 2),round(species_biomass, 1)))
+    
+    EST_FISH_COMM(data)
+
+    output$fish_community = DT::renderDataTable(server = T, {
+      datatable(
+        data[,c(2:3,5:7,ncol(data)-1,ncol(data))],
+        rownames = F,
+        selection = list(
+          selected = NULL,
+          target = "row",
+          mode = "multiple"
+        ),
+        editable = F,
+        options = list(
+          dom='t',
+          autoWidth = T,
+          pageLength = 200,
+          columnDefs = list(list(width = '125px', targets = c(2:6)),list(className = 'dt-center', targets = c(2:6))),
+          scrollY = T,
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff','text-align': 'center'});",
+            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+            "}"
+          )
+        )
+      ) |>
+        formatStyle(0, target= 'row', lineHeight='25%') |>
+        formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
+    })
+  })
 }
 shinyApp(ui, server)
