@@ -139,7 +139,7 @@ server= function(input,output,session) {
     HTML(paste0(
       "<br>",
       "<div style='background-color: lightgreen; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Acceptable Stream Width/Occurrence Prob</div>",
-      "<div style='background-color: yellow; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Low Occurrence Probability</div>",
+      "<div style='background-color: #AAAAAA; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Low Occurrence Probability</div>",
       "<div style='background-color: lightgray; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Presence at this Stream Width</div>",
       "<div style='background-color: gray; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Width and Low Probability</div>"
     ))
@@ -147,9 +147,9 @@ server= function(input,output,session) {
   
   output$landing_text = renderUI({
     HTML("<div style='text-align: center; font-size: 20px;'>
-    <b>PiSCES</b> forecasts fish assemblages in US streams using HUC-based distribution data for over 1,000 species from NatureServe, USGS, and the Peterson Field Guide. 
-    It refines potential communities using species rarity, stream size preferences, and water quality metrics (e.g., pH, conductivity). 
-    Additionally, <b>PiSCES</b> can generate abundance distributions based on the inverse relationship between species abundance and maximum body size.
+    <b>PiSCES</b> estimates fish assemblages in US streams using HUC-based distribution data for over 1,000 species based on stream surveys conducted by NatureServe, USEPA, USGS, and information in the Peterson Field Guide. 
+    It refines potential assemblages using species rarity, stream size preferences, and stream metrics (e.g., drainage area and slope). 
+    Additionally, <b>PiSCES</b> can generate fish community abundance distributions based on the general inverse relationships between maximum body size and species abundance.
     </div>")
   })
   
@@ -2077,7 +2077,7 @@ server= function(input,output,session) {
           !is.na(fish_data[[input$prob_thresh]]) & fish_data$Predicted_Prob < fish_data[[input$prob_thresh]] &
             (Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width), "gray",
           ifelse(
-            !is.na(fish_data[[input$prob_thresh]]) & fish_data$Predicted_Prob < fish_data[[input$prob_thresh]], "yellow",
+            !is.na(fish_data[[input$prob_thresh]]) & fish_data$Predicted_Prob < fish_data[[input$prob_thresh]], "#AAAAAA",
             ifelse(
               Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width, "lightgray",
               "lightgreen"
@@ -2182,7 +2182,7 @@ server= function(input,output,session) {
       !is.na(data[[input$prob_thresh]]) & data$Predicted_Prob < data[[input$prob_thresh]] &
         (Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width), "gray",
       ifelse(
-        !is.na(data[[input$prob_thresh]]) & data$Predicted_Prob < data[[input$prob_thresh]], "yellow",
+        !is.na(data[[input$prob_thresh]]) & data$Predicted_Prob < data[[input$prob_thresh]], "#AAAAAA",
         ifelse(
           Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width, "lightgray",
           "lightgreen"
@@ -2285,7 +2285,7 @@ server= function(input,output,session) {
       !is.na(temp_data[[input$prob_thresh]]) & temp_data$Predicted_Prob < temp_data[[input$prob_thresh]] &
         (Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width), "gray",
       ifelse(
-        !is.na(temp_data[[input$prob_thresh]]) & temp_data$Predicted_Prob < temp_data[[input$prob_thresh]], "yellow",
+        !is.na(temp_data[[input$prob_thresh]]) & temp_data$Predicted_Prob < temp_data[[input$prob_thresh]], "#AAAAAA",
         ifelse(
           Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width, "lightgray",
           "lightgreen"
@@ -2374,7 +2374,7 @@ server= function(input,output,session) {
       !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]] &
         (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "gray",
       ifelse(
-        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "yellow",
+        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "#AAAAAA",
         ifelse(
           Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "lightgray",
           "lightgreen"
@@ -2465,7 +2465,7 @@ server= function(input,output,session) {
       !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]] &
         (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "gray",
       ifelse(
-        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "yellow",
+        !is.na(fishes[[input$prob_thresh]]) & fishes$Predicted_Prob < fishes[[input$prob_thresh]], "#AAAAAA",
         ifelse(
           Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "lightgray",
           "lightgreen"
@@ -2625,16 +2625,16 @@ server= function(input,output,session) {
     
   }, ignoreNULL=FALSE)
   
-  output$biomass_estimation_ui = renderUI({
-    fluidRow(
-      div(class = "custom-inline-elements",
-          div(numericInput(inputId = "fish_count", label = "Fish Count", value = 5000, min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
-          div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
-          div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = 50, min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
-          div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
-      )
-    )
-  })
+  # output$biomass_estimation_ui = renderUI({
+  #   fluidRow(
+  #     div(class = "custom-inline-elements",
+  #         div(numericInput(inputId = "fish_count", label = "Fish Count", value = 5000, min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+  #         div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+  #         div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = 50, min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
+  #         div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+  #     )
+  #   )
+  # })
   
   observeEvent(input$assemblage_tabs, ignoreInit = T, {
 
@@ -2683,10 +2683,24 @@ server= function(input,output,session) {
             formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
         })
       }
+      
+      output$biomass_estimation_ui = renderUI({
+        fluidRow(
+          div(class = "custom-inline-elements",
+              div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+              div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+              div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
+              div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+          )
+        )
+      })
+      
     }
   })
   
   observeEvent(input$biomass_calc, ignoreInit=T, {
+    
+    comm_biomass(input$biomass)
 
     data = EST_FISH_COMM()
 
@@ -2719,7 +2733,7 @@ server= function(input,output,session) {
     data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass,3),ifelse(species_biomass < 1,round(species_biomass,2),round(species_biomass,1)))
 
     summed_count = sum(species_count)
-    updateNumericInput(session, "fish_count", value = summed_count)
+    comm_numbers(summed_count)
 
     EST_FISH_COMM(data)
 
@@ -2750,9 +2764,23 @@ server= function(input,output,session) {
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
     })
+    
+    output$biomass_estimation_ui = renderUI({
+      fluidRow(
+        div(class = "custom-inline-elements",
+            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+        )
+      )
+    })
+    
   })
   
   observeEvent(input$count_calc, ignoreInit=T, {
+    
+    comm_numbers(input$fish_count)
 
     data = EST_FISH_COMM()
 
@@ -2774,7 +2802,7 @@ server= function(input,output,session) {
       summed_biomass = round(summed_biomass, 1)
     }
 
-    updateNumericInput(session, "biomass", value = summed_biomass)
+    comm_biomass(summed_biomass)
 
     data$Count = round(species_count,1)
     data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass, 3),ifelse(species_biomass < 1,round(species_biomass, 2),round(species_biomass, 1)))
@@ -2808,6 +2836,18 @@ server= function(input,output,session) {
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
     })
+    
+    output$biomass_estimation_ui = renderUI({
+      fluidRow(
+        div(class = "custom-inline-elements",
+            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+        )
+      )
+    })
+    
   })
 }
 shinyApp(ui, server)

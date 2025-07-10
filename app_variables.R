@@ -82,6 +82,9 @@ EST_FISH_COMM = reactiveVal()
 filtered_STREAM_fishes = reactiveVal()
 display = reactiveVal("none")
 
+comm_numbers = reactiveVal(5000)
+comm_biomass = reactiveVal(50)
+
 stream_lat = reactiveVal()
 stream_lon = reactiveVal()
 stream_ID = reactiveVal()
