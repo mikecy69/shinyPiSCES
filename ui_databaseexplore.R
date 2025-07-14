@@ -22,7 +22,7 @@ DataExplPanel = sidebarLayout(
                   column(3,div(class = "centered-select",selectizeInput("sensi_choice",label="Sensitivity",choices = c("Tolerant","Medium","Sensitive","Unclassified"),
                                                                       selected = NULL, multiple=T, options = list(placeholder = 'Selection'))))),
             
-            fluidRow(column(4,sliderInput(inputId = "rarity_slider",label = "PFG_Rarity",min = 1,max = 10,value = c(1,10))),
+            fluidRow(column(4,sliderInput(inputId = "rarity_slider",label = "PFG Rarity",min = 1,max = 10,value = c(1,10))),
                   column(4,sliderInput(inputId = "max_age",label = "Max Age (yr)",min = 1,max = 25,value = c(1,25))),
                   column(4,sliderInput(inputId = "max_TL",label = "Max Total Length (cm)",min = 0,max = 200,value = c(0,200), step=5))),
             
@@ -30,9 +30,9 @@ DataExplPanel = sidebarLayout(
                      column(4,tags$div(style = "text-align: center; font-weight: bold;","Lower/Upper Mean Weight (g)"),
                             fluidRow(column(6,div(style = "display: flex; justify-content: flex-end; margin-right: -10px;",
                                         numericInput(inputId = "lower_mean_weight",label = NULL,value = 0, min = 0, max = 100000, step = 1))),
-                            column(6,div(style = "display: flex; justify-content: flex-start; margin-left: -10px;",
+                                    column(6,div(style = "display: flex; justify-content: flex-start; margin-left: -10px;",
                                         numericInput(inputId = "upper_mean_weight",label = NULL,value = 200000, min = 0, max = 200000, step = 1))))),
-                     column(4,sliderInput(inputId = "girth",label = "Girth Index",min = 0,max = 1,value = c(0,1), step=0.01))),
+                     column(4,sliderInput(inputId = "girth_slider",label = "Girth Index",min = 0,max = 1,value = c(0,1), step=0.01))),
             
             fluidRow(column(12,
               div(

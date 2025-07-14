@@ -21,6 +21,8 @@ ui = fluidPage(
   
   bsTooltip(id = "mean_width", title = "Mean stream width: 75% of estimated bankfull width", placement = "top", trigger = "hover"),
   
+  bsTooltip(id = "girth_slider", title = "A relative measure of weight at a standard size. 0:very light 1:very heavy", placement = "top", trigger = "hover"),
+  
   bsTooltip(id = "watershed_integrity", title = "Index of Watershed Integrity", placement = "top", trigger = "hover"),
   
   bsTooltip(id = "benthic_invert", title = "Benthic MacroInvertebrate Multimetric Index", placement = "top", trigger = "hover"),

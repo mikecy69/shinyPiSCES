@@ -1,6 +1,9 @@
 AssemPredPanel = sidebarLayout(
   sidebarPanel = sidebarPanel(id="aspredsidepanel",width=3,
                               
+                        htmlOutput("assempred_text"),
+                        tags$hr(style = "border-color: #2c3e50; margin-top: 6px; margin-bottom: 6px;"),
+                              
                         fluidRow(column(3, div(style = "width: 82px;", disabled(textInput("drainage_area", HTML("DA (km<sup>2</sup>)"), value = "0")))),
                             column(3, div(style = "width: 82px;", disabled(textInput("slope", "Slope (%)", value = "0")))),
                             column(3, div(style = "width: 82px;", disabled(textInput("elevation", "Elev (m)", value = "0")))),
@@ -40,5 +43,5 @@ AssemPredPanel = sidebarLayout(
                   column(7,align = "left",DT::dataTableOutput('fish_assem')),
                   column(5,align = "left",h4("Proposed Community"),DT::dataTableOutput('filtered_fish')))),
                 tabPanel("Community Biomass Estimation",uiOutput("biomass_estimation_ui"),
-                         fluidRow(column(12,DT::dataTableOutput('fish_community'))))))
+                         fluidRow(column(12,DT::dataTableOutput('fish_community'),DT::dataTableOutput('selected_fishy'),uiOutput("fishy_links"))))))
 )
