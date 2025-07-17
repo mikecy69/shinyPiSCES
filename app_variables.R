@@ -84,6 +84,7 @@ display = reactiveVal("none")
 
 comm_numbers = reactiveVal(5000)
 comm_biomass = reactiveVal(50)
+rarity_value = reactiveVal(0.8)
 
 stream_lat = reactiveVal()
 stream_lon = reactiveVal()

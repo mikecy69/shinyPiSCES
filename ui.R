@@ -27,7 +27,6 @@ ui = fluidPage(
   
   bsTooltip(id = "benthic_invert", title = "Benthic MacroInvertebrate Multimetric Index", placement = "top", trigger = "hover"),
   
-  
   tags$head(
   
     tags$script(HTML(
@@ -77,6 +76,16 @@ ui = fluidPage(
     #lower_mean_weight, #upper_mean_weight {
       width: 115px !important;
       text-align: center !important;
+    }
+    
+    #rarity_parm {
+      width: 85px !important;
+      height: 35px !important;
+      text-align: center !important;
+    }
+    
+    #rarity_parm + .tooltip > .tooltip-inner {
+      min-width: 250px !important;
     }
     
     #update_probs, #add_fish, #remove_fish, #biomass_calc, #count_calc {
@@ -278,7 +287,8 @@ ui = fluidPage(
   "))),
   
   #div(id = "loading", tags$img(src = "https://jeroen.github.io/images/banana.gif")),
-  div(id = "loading", tags$img(src = "dancing_shark.gif", width=500)),
+  #div(id = "loading", tags$img(src = "dancing_shark.gif", width=500)),
+  div(id = "loading", tags$img(src = "loading_fish.gif", width=500)),
   
   navbarPage(
     title = "PiSCES",

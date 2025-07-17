@@ -130,8 +130,9 @@ server= function(input,output,session) {
       "<br>",
       "<div style='background-color: lightgreen; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>OK Stream Width and Occurrence Probability</div>",
       "<div style='background-color: #C8D2DC; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Stream Width</div>",
+      "<div style='background-color: white; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>No Occurrence Model</div>",
       "<div style='background-color: #8C96A0; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Low Occurrence Probability</div>",
-      "<div style='background-color: #505A64; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Width and Low Probability</div>"
+      "<div style='background-color: #505A64; color: white; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Width and Low Probability</div>"
     ))
   })
   
@@ -365,11 +366,39 @@ server= function(input,output,session) {
       boundaries_added(TRUE)
       
     } else if (!is.null(current_zoom()) && previous_zoom() >= 5 && current_zoom() < 5) {
+      
       leafletProxy("map") |> clearShapes()
       boundaries_added(FALSE)
+      
+    } else if (previous_zoom() < 5 && current_zoom() >= 5 && !boundaries_added()) {
+      
+      shinyjs::disable("map")
+      shinyjs::show("loading")
+      
+      leafletProxy("map") |>
+        addPolygons(
+          data = HUC_boundaries,
+          layerId = ~id,
+          color = "#03F",
+          weight = 2,
+          opacity = 1.0,
+          fillColor = "transparent",
+          fillOpacity = 0,
+          highlightOptions = highlightOptions(
+            fillColor = "cadetblue", fillOpacity = 0.5,
+            bringToFront = TRUE
+          ),
+          group = "ordinary"
+        )
+      
+      delay(time_delay(), {
+        shinyjs::enable("map")
+        shinyjs::hide("loading")
+      })
+      
+      boundaries_added(TRUE)
     }
     
-    # Update the previous zoom level
     previous_zoom(current_zoom())
   })
   
@@ -2020,7 +2049,7 @@ server= function(input,output,session) {
         
         con = dbConnect(RSQLite::SQLite(), "stream_bbd.db")
         
-        query = sprintf("SELECT wsareasqkm, slope, elevation, bmmi, iwi, bankfull_width FROM catchment WHERE comid = '%s'", feature_id)
+        query = sprintf("SELECT wsareasqkm, slope, elevation, iwi, bmmi, bankfull_width FROM catchment WHERE comid = '%s'", feature_id)
         result = dbGetQuery(con, query)
         
         if (is.null(result$wsareasqkm) || result$wsareasqkm == -9999 || is.na(result$wsareasqkm)) {
@@ -2048,16 +2077,16 @@ server= function(input,output,session) {
           Mean_Width(width)
         }
         
-        if (is.null(result$IWI) || result$IWI == -9999 || is.na(result$IWI)) {
+        if (is.null(result$iwi) || result$iwi == -9999 || is.na(result$iwi)) {
           IWI(NA)
         } else {
-          IWI(result$IWI)
+          IWI(result$iwi)
         }
         
-        if (is.null(result$BMMI) || result$BMMI == -9999 || is.na(result$BMMI)) {
+        if (is.null(result$bmmi) || result$bmmi == -9999 || is.na(result$bmmi)) {
           BMMI(NA)
         } else {
-          BMMI(result$BMMI)
+          BMMI(result$bmmi)
         }
         
         dbDisconnect(con)
@@ -2071,8 +2100,9 @@ server= function(input,output,session) {
         updateTextInput(session, "slope", value = as.character(updateSlope))
         updateTextInput(session, "elevation", value = as.character(updateElev))
         updateTextInput(session, "mean_width", value = as.character(updateWidth))
-        updateNumericInput(session, "benthic_invert", value = round(BMMI(), 3))
-        updateNumericInput(session, "watershed_integrity", value = round(IWI(), 3))
+        updateNumericInput(session, "watershed_integrity", value = round(IWI(),3))
+        updateNumericInput(session, "benthic_invert", value = round(BMMI(),3))
+
         
         fish_data1 = HUC_data[HUC_data$HUC == stream_HUC(),1:2]
         colnames(fish_data1) = c("Scientific Name","Common Name")
@@ -2096,6 +2126,7 @@ server= function(input,output,session) {
                          "P0" = "Crit_P0")
         
         selected_modelstats = modelstats[, c("Model", CritCol)]
+        
         fish_data = merge(fish_data3, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
         
         fish_data = fish_data[order(fish_data[,2]), ]
@@ -2103,20 +2134,17 @@ server= function(input,output,session) {
         
         STREAM_fishes(fish_data)
         
-        filtered_fish_data  = fish_data[Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width &
-                                          (fish_data$`Predicted Prob` > fish_data[[input$prob_thresh]] | is.na(fish_data[[input$prob_thresh]])),]
+        # filtered_fish_data  = fish_data[Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width & (fish_data$`Predicted Prob` > fish_data[[input$prob_thresh]] | is.na(fish_data[[input$prob_thresh]])),]
+        filtered_fish_data  = fish_data[!is.na(fish_data$`Predicted Prob`) & Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width & (fish_data$`Predicted Prob` >= fish_data[[input$prob_thresh]]),]
         
         filtered_STREAM_fishes(filtered_fish_data)
         
-        fish_data$row_color = ifelse(
-          !is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]] &
-            (Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width), "#505A64",
-          ifelse(
-            !is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]], "#8C96A0",
-            ifelse(
-              Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width, "#C8D2DC",
-              "lightgreen"
-            )
+        fish_data$row_color = ifelse(!is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]] & 
+                                       (Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width), "#505A64",
+                                     
+          ifelse(!is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]], "#8C96A0",
+                 
+                 ifelse(is.na(fish_data[[input$prob_thresh]]), "white", ifelse(Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width, "#C8D2DC","lightgreen"))
           )
         )
         
@@ -2151,7 +2179,8 @@ server= function(input,output,session) {
               )
             )
           ) |>
-            formatStyle(columns = names(fish_data),target = 'row',backgroundColor = styleEqual(unique(fish_data$row_color), unique(fish_data$row_color))) |>
+            formatStyle(columns = names(fish_data),target = 'row',backgroundColor = styleEqual(unique(fish_data$row_color), unique(fish_data$row_color)),
+                        color = styleEqual("#505A64", "white")) |>
             formatStyle(0, target= 'row', lineHeight='25%') |>
             formatStyle(columns = c(10,11,13),`text-align` = 'center')
         })
@@ -2182,6 +2211,192 @@ server= function(input,output,session) {
             formatStyle(0, target= 'row', lineHeight='25%')
         })
       }
+    } else {
+      
+      showModal(modalDialog(size = "m",
+        div(
+          style = "text-align: center;",
+          "USEPA WATERS API service not responding; data for Elk Creek near Erie, PA, provided instead."
+        ),
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      
+      stream_ID(9841446)
+      stream_HUC("04120101")
+      stream_NAME("Elk Creek")
+      
+      output$segment_info = renderUI({
+        HTML(paste(
+          paste("<em>Latitude:</em>", stream_lat()), "<br>",
+          paste("<em>Longitude:</em>", stream_lon()), "<br>",
+          paste("<em>COM ID:</em>", stream_ID()), "<br>",
+          paste("<em>HUC:</em>", stream_HUC()), "<br>",
+          paste("<em>Name:</em>", stream_NAME())
+        ))
+      })
+      
+      con = dbConnect(RSQLite::SQLite(), "stream_bbd.db")
+      
+      query = sprintf("SELECT wsareasqkm, slope, elevation, bmmi, iwi, bankfull_width FROM catchment WHERE comid = '%s'", stream_ID())
+      result = dbGetQuery(con, query)
+      
+      if (is.null(result$wsareasqkm) || result$wsareasqkm == -9999 || is.na(result$wsareasqkm)) {
+        WA(NA)
+      } else {
+        WA(result$wsareasqkm)
+      }
+      
+      if (is.null(result$slope) || result$slope == -9999 || is.na(result$slope)) {
+        Slope(NA)
+      } else {
+        Slope(result$slope)
+      }
+      
+      if (is.null(result$elevation) || result$elevation == -9999 || is.na(result$elevation)) {
+        Elev(NA)
+      } else {
+        Elev(result$elevation)
+      }
+      
+      if (is.null(result$bankfull_width) || result$bankfull_width == -9999 || is.na(result$bankfull_width)) {
+        Mean_Width(NA)
+      } else {
+        width = 0.75*result$bankfull_width
+        Mean_Width(width)
+      }
+      
+      if (is.null(result$iwi) || result$iwi == -9999 || is.na(result$iwi)) {
+        IWI(NA)
+      } else {
+        IWI(result$iwi)
+      }
+      
+      if (is.null(result$bmmi) || result$bmmi == -9999 || is.na(result$bmmi)) {
+        BMMI(NA)
+      } else {
+        BMMI(result$bmmi)
+      }
+      
+      dbDisconnect(con)
+      
+      updateDA = round(WA(), 1)
+      updateSlope = 100*round(Slope(), 5)
+      updateElev = round(Elev(), 1)
+      updateWidth = round(Mean_Width(), 1)
+      
+      updateTextInput(session, "drainage_area", value = as.character(updateDA))
+      updateTextInput(session, "slope", value = as.character(updateSlope))
+      updateTextInput(session, "elevation", value = as.character(updateElev))
+      updateTextInput(session, "mean_width", value = as.character(updateWidth))
+      updateNumericInput(session, "benthic_invert", value = round(BMMI(), 3))
+      updateNumericInput(session, "watershed_integrity", value = round(IWI(), 3))
+      
+      fish_data1 = HUC_data[HUC_data$HUC == stream_HUC(),1:2]
+      colnames(fish_data1) = c("Scientific Name","Common Name")
+      
+      fish_data2 = fish_props[fish_props[,7] %in% fish_data1[,2],c(1,3,7,16,24,28:29,61:62)]
+      
+      common_names_order = fish_data1$`Common Name`
+      order_indices = match(common_names_order, fish_data2[,"Common_Name"])
+      fish_data2_ordered = fish_data2[order_indices, ]
+      fish_data2_ordered = fish_data2_ordered[, -which(names(fish_data2_ordered) == "Common_Name")]
+      
+      fish_data3 = cbind(fish_data1, fish_data2_ordered)
+      
+      fish_data3$`Predicted Prob` = round(calculate_probs(as.numeric(fish_data3$Model_ID), WA(),Slope(),Elev(),IWI(),BMMI()),3)
+      
+      CritCol = switch(input$prob_thresh,
+                       "P1" = "Crit_P1",
+                       "Ave(P0,P1)" = "Crit_Ave",
+                       "P1 - 1SD" = "Crit_1SD",
+                       "P1 - 2SD" = "Crit_2SD",
+                       "P0" = "Crit_P0")
+      
+      selected_modelstats = modelstats[, c("Model", CritCol)]
+      
+      fish_data = merge(fish_data3, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
+      
+      fish_data = fish_data[order(fish_data[,2]), ]
+      colnames(fish_data)[ncol(fish_data)] = input$prob_thresh
+      
+      STREAM_fishes(fish_data)
+      
+      filtered_fish_data  = fish_data[!is.na(fish_data$`Predicted Prob`) & Mean_Width() >= fish_data$Lower_Width & Mean_Width() <= fish_data$Upper_Width & (fish_data$`Predicted Prob` >= fish_data[[input$prob_thresh]]),]
+      
+      filtered_STREAM_fishes(filtered_fish_data)
+      
+      fish_data$row_color = ifelse(!is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]] & 
+                                (Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width), "#505A64",
+                                   
+                ifelse(!is.na(fish_data[[input$prob_thresh]]) & fish_data$`Predicted Prob` < fish_data[[input$prob_thresh]], "#8C96A0",
+                                          
+                        ifelse(is.na(fish_data[[input$prob_thresh]]), "white", ifelse(Mean_Width() < fish_data$Lower_Width | Mean_Width() > fish_data$Upper_Width, "#C8D2DC","lightgreen"))
+                )
+      )
+      
+      fish_data$Included = ifelse(fish_data[,2] %in% filtered_fish_data[,2], "Yes", "No")
+      
+      output$fish_assem = DT::renderDataTable(server = TRUE, {
+        datatable(
+          fish_data,
+          rownames = FALSE,
+          selection = list(
+            selected = NULL,
+            target = "row",
+            mode = "multiple"
+          ),
+          editable = FALSE,
+          options = list(
+            dom = 't',
+            autoWidth = TRUE,
+            pageLength = 200,
+            scrollY = TRUE,
+            columnDefs = list(
+              list(visible = FALSE, targets = c(0,3:9,12)),
+              list(width = '100px', targets = 10),
+              list(width = '80px', targets = c(11,13)),
+              list(className = 'dt-center', targets = c(10,11,13))
+            ),
+            initComplete = JS(
+              "function(settings, json) {",
+              "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
+              "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+              "}"
+            )
+          )
+        ) |>
+          formatStyle(columns = names(fish_data),target = 'row',backgroundColor = styleEqual(unique(fish_data$row_color), unique(fish_data$row_color)),color = styleEqual("#505A64", "white")) |>
+          formatStyle(0, target= 'row', lineHeight='25%') |>
+          formatStyle(columns = c(10,11,13),`text-align` = 'center')
+      })
+      
+      output$filtered_fish = DT::renderDataTable(server = T, {
+        datatable(
+          filtered_fish_data[,2:3],
+          rownames = F,
+          selection = list(
+            selected = NULL,
+            target = "row",
+            mode = "multiple"
+          ),
+          editable = F,
+          options = list(
+            dom='t',
+            autoWidth = T,
+            pageLength = 200,
+            scrollY = T,
+            initComplete = JS(
+              "function(settings, json) {",
+              "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff'});",
+              "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+              "}"
+            )
+          )
+        ) |>
+          formatStyle(0, target= 'row', lineHeight='25%')
+      })
+      
     }
     
     #updateTabsetPanel(session, inputId = 'shinyPiSCES', selected = 'Assemblage Predictor')
@@ -2204,8 +2419,8 @@ server= function(input,output,session) {
     data = STREAM_fishes()[,-ncol(STREAM_fishes())]
     
     selected_modelstats = modelstats[, c("Model", CritCol)]
-    data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
     
+    data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
     colnames(data)[ncol(data)] = input$prob_thresh
     
     data$`Predicted Prob` = round(calculate_probs(as.numeric(data$Model_ID), WA(),Slope(),Elev(),IWI(),BMMI()),3)
@@ -2214,20 +2429,16 @@ server= function(input,output,session) {
     
     STREAM_fishes(data)
     
-    data$row_color = ifelse(
-      !is.na(data[[input$prob_thresh]]) & data$`Predicted Prob` < data[[input$prob_thresh]] &
-        (Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width), "#505A64",
-      ifelse(
-        !is.na(data[[input$prob_thresh]]) & data$`Predicted Prob` < data[[input$prob_thresh]], "#8C96A0",
-        ifelse(
-          Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width, "#C8D2DC",
-          "lightgreen"
-        )
-      )
+    data$row_color = ifelse(!is.na(data[[input$prob_thresh]]) & data$`Predicted Prob` < data[[input$prob_thresh]] & 
+                                   (Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width), "#505A64",
+                                 
+                ifelse(!is.na(data[[input$prob_thresh]]) & data$`Predicted Prob` < data[[input$prob_thresh]], "#8C96A0",
+                                        
+                        ifelse(is.na(data[[input$prob_thresh]]), "white", ifelse(Mean_Width() < data$Lower_Width | Mean_Width() > data$Upper_Width, "#C8D2DC","lightgreen"))
+                )
     )
     
-    filtered_fish_data  = data[Mean_Width() >= data$Lower_Width & Mean_Width() <= data$Upper_Width &
-                                 (data$`Predicted Prob` > data[[input$prob_thresh]] | is.na(data[[input$prob_thresh]])),]
+    filtered_fish_data  = data[!is.na(data$`Predicted Prob`) & Mean_Width() >= data$Lower_Width & Mean_Width() <= data$Upper_Width & (data$`Predicted Prob` >= data[[input$prob_thresh]]),]
     
     filtered_STREAM_fishes(filtered_fish_data)
     
@@ -2262,7 +2473,7 @@ server= function(input,output,session) {
           )
         )
       ) |>
-        formatStyle(columns = names(data),target = 'row',backgroundColor = styleEqual(unique(data$row_color), unique(data$row_color))) |>
+        formatStyle(columns = names(data),target = 'row',backgroundColor = styleEqual(unique(data$row_color), unique(data$row_color)),color = styleEqual("#505A64", "white")) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(10,11,13),`text-align` = 'center')
     })
@@ -2292,9 +2503,6 @@ server= function(input,output,session) {
       ) |>
         formatStyle(0, target= 'row', lineHeight='25%')
     })
-    
-    updateTabsetPanel(session, inputId = 'shinyPiSCES', selected = 'Assemblage Predictor')
-    updateTabsetPanel(session, inputId = 'assemblage_tabs', selected = 'Fish Assemblage Filtering')
   })
   
   observeEvent(input$prob_thresh, ignoreInit=T, {
@@ -2309,7 +2517,8 @@ server= function(input,output,session) {
     data = STREAM_fishes()[,-ncol(STREAM_fishes())]
     
     selected_modelstats = modelstats[, c("Model", CritCol)]
-      data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
+    
+    data = merge(data, selected_modelstats, by.x = "Model_ID", by.y = "Model", all.x = TRUE)
     
     temp_data = data
     colnames(temp_data)[ncol(temp_data)] = input$prob_thresh
@@ -2318,20 +2527,16 @@ server= function(input,output,session) {
     
     STREAM_fishes(temp_data)
     
-    temp_data$row_color = ifelse(
-      !is.na(temp_data[[input$prob_thresh]]) & temp_data$`Predicted Prob` < temp_data[[input$prob_thresh]] &
-        (Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width), "#505A64",
-      ifelse(
-        !is.na(temp_data[[input$prob_thresh]]) & temp_data$`Predicted Prob` < temp_data[[input$prob_thresh]], "#8C96A0",
-        ifelse(
-          Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width, "#C8D2DC",
-          "lightgreen"
-        )
-      )
+    temp_data$row_color = ifelse(!is.na(temp_data[[input$prob_thresh]]) & temp_data$`Predicted Prob` < temp_data[[input$prob_thresh]] & 
+                              (Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width), "#505A64",
+                            
+                            ifelse(!is.na(temp_data[[input$prob_thresh]]) & temp_data$`Predicted Prob` < temp_data[[input$prob_thresh]], "#8C96A0",
+                                   
+                                   ifelse(is.na(temp_data[[input$prob_thresh]]), "white", ifelse(Mean_Width() < temp_data$Lower_Width | Mean_Width() > temp_data$Upper_Width, "#C8D2DC","lightgreen"))
+                            )
     )
     
-    filtered_temp = temp_data[Mean_Width() >= temp_data$Lower_Width & Mean_Width() <= temp_data$Upper_Width &
-                                (temp_data$`Predicted Prob` > temp_data[[input$prob_thresh]] | is.na(temp_data[[input$prob_thresh]])),]
+    filtered_temp  = temp_data[!is.na(temp_data$`Predicted Prob`) & Mean_Width() >= temp_data$Lower_Width & Mean_Width() <= temp_data$Upper_Width & (temp_data$`Predicted Prob` >= temp_data[[input$prob_thresh]]),]
     
     filtered_STREAM_fishes(filtered_temp)
     
@@ -2366,7 +2571,7 @@ server= function(input,output,session) {
           )
         )
       ) |>
-        formatStyle(columns = names(temp_data),target = 'row',backgroundColor = styleEqual(unique(temp_data$row_color), unique(temp_data$row_color))) |>
+        formatStyle(columns = names(temp_data),target = 'row',backgroundColor = styleEqual(unique(temp_data$row_color), unique(temp_data$row_color)),color = styleEqual("#505A64", "white")) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(10,11,13),`text-align` = 'center')
     })
@@ -2408,16 +2613,13 @@ server= function(input,output,session) {
     
     fishes = STREAM_fishes()
     
-    fishes$row_color = ifelse(
-      !is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]] &
-        (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "#505A64",
-      ifelse(
-        !is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]], "#8C96A0",
-        ifelse(
-          Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "#C8D2DC",
-          "lightgreen"
-        )
-      )
+    fishes$row_color = ifelse(!is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]] & 
+                                   (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "#505A64",
+                                 
+                ifelse(!is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]], "#8C96A0",
+                                        
+                        ifelse(is.na(fishes[[input$prob_thresh]]), "white", ifelse(Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "#C8D2DC","lightgreen"))
+                )
     )
     
     fishes$Included = ifelse(fishes[,2] %in% new_filtered[,2], "Yes", "No")
@@ -2451,7 +2653,7 @@ server= function(input,output,session) {
           )
         )
       ) |>
-        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color))) |>
+        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color)),color = styleEqual("#505A64", "white")) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(10,11,13),`text-align` = 'center')
     })
@@ -2500,16 +2702,13 @@ server= function(input,output,session) {
     
     fishes = STREAM_fishes()
     
-    fishes$row_color = ifelse(
-      !is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]] &
-        (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "#505A64",
-      ifelse(
-        !is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]], "#8C96A0",
-        ifelse(
-          Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "#C8D2DC",
-          "lightgreen"
-        )
-      )
+    fishes$row_color = ifelse(!is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]] & 
+                                (Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width), "#505A64",
+                              
+            ifelse(!is.na(fishes[[input$prob_thresh]]) & fishes$`Predicted Prob` < fishes[[input$prob_thresh]], "#8C96A0",
+                                     
+                    ifelse(is.na(fishes[[input$prob_thresh]]), "white", ifelse(Mean_Width() < fishes$Lower_Width | Mean_Width() > fishes$Upper_Width, "#C8D2DC","lightgreen"))
+           )
     )
     
     fishes$Included = ifelse(fishes[,2] %in% updated_filtered[,2], "Yes", "No")
@@ -2543,7 +2742,7 @@ server= function(input,output,session) {
           )
         )
       ) |>
-        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color))) |>
+        formatStyle(columns = names(fishes),target = 'row',backgroundColor = styleEqual(unique(fishes$row_color), unique(fishes$row_color)),color = styleEqual("#505A64", "white")) |>
         formatStyle(0, target= 'row', lineHeight='25%') |>
         formatStyle(columns = c(10,11,13),`text-align` = 'center')
     })
@@ -2675,7 +2874,7 @@ server= function(input,output,session) {
         
         data = filtered_STREAM_fishes()
         
-        data[,6] = ifelse(data[,6] > 1, round(data[,6], 1), data[,6])
+        data[,6] = ifelse(data[,6] > 10, round(data[,6], 0), round(data[,6],2))
         
         colnames(data)[c(6,8)] = c("Mean Weight (g)", "Thin Adjustment")
         
@@ -2686,7 +2885,7 @@ server= function(input,output,session) {
 
         output$fish_community = DT::renderDataTable(server = T, {
           datatable(
-            data[,c(2:3,5:8,ncol(data)-1,ncol(data))],
+            data[,c(2:3,5:6,ncol(data)-1,ncol(data))],
             rownames = F,
             selection = list(
               selected = NULL,
@@ -2698,17 +2897,23 @@ server= function(input,output,session) {
               dom='t',
               autoWidth = T,
               pageLength = 200,
-              columnDefs = list(list(width = '125px', targets = c(2:7)),list(className = 'dt-center', targets = c(2:7))),
+              columnDefs = list(list(width = '125px', targets = c(2:5)),list(className = 'dt-center', targets = c(2:5))),
               scrollY = T,
               initComplete = JS(
                 "function(settings, json) {",
-                "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff','text-align': 'center'});",
+                "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff', 'text-align': 'center'});",
+                "$(this.api().columns().header()).eq(2).attr('data-toggle', 'tooltip').attr('data-html', 'true').attr('title', '1 = Very Common<br>10 = Very Rare');",
+                "$('th').tooltip({",
+                "  html: true,",
+                "  delay: { show: 0 },",
+                "  container: 'body'",
+                "});",
                 "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
                 "}"
               )
             )
           ) |>
-            formatStyle(0, target= 'row', lineHeight='25%') |>
+            formatStyle(0, target= 'row', lineHeight='50%') |>
             formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
         })
       }
@@ -2716,120 +2921,40 @@ server= function(input,output,session) {
       output$biomass_estimation_ui = renderUI({
         fluidRow(
           div(class = "custom-inline-elements",
-              div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+              div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-left: 1px !important; margin-right: 8px !important;"),
               div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
-              div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
-              div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+              div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 8px !important; margin-right: 8px !important;"),
+              div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate")),
+              div(numericInput(inputId = "rarity_parm", label = "Rarity Adjust", value = rarity_value(), min = 0.1, max=0.99,step=0.01),style= "width: 100px !important; margin-left: 20px !important;"),
           )
         )
       })
-      
     }
-  })
-  
-  observeEvent(input$biomass_calc, ignoreInit=T, {
-    
-    comm_biomass(input$biomass)
-
-    data = EST_FISH_COMM()
-
-    total_biomass = as.numeric(input$biomass)
-
-    species_abund = mapply(function(W, b, d) {
-      W^(-(b - d))
-    }, data$`Mean Weight (g)`, data$Thinning, data$`Thin Adjustment`)
-    
-    rarity_factors = data[,5]
-    adjusted_abund = species_abund*(1-0.111111*(rarity_factors-1))
-    
-    summed_abund = sum(adjusted_abund)
-    rel_abund = adjusted_abund / summed_abund
-
-    error = 0
-    total_count = 1000
-
-    while (error < 0.98 || error > 1.02) {
-
-      species_count = round(rel_abund * total_count)
-
-      species_biomass = (species_count*data$`Mean Weight (g)`) / 1000
-
-      summed_biomass = sum(species_biomass)
-
-      error = total_biomass / summed_biomass
-      total_count = error * total_count
-    }
-
-    data$Count = round(species_count,1)
-    data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass,3),ifelse(species_biomass < 1,round(species_biomass,2),round(species_biomass,1)))
-
-    summed_count = sum(species_count)
-    comm_numbers(summed_count)
-
-    EST_FISH_COMM(data)
-
-    output$fish_community = DT::renderDataTable(server = T, {
-      datatable(
-        data[,c(2:3,5:8,ncol(data)-1,ncol(data))],
-        rownames = F,
-        selection = list(
-          selected = NULL,
-          target = "row",
-          mode = "single"
-        ),
-        editable = F,
-        options = list(
-          dom='t',
-          autoWidth = T,
-          pageLength = 200,
-          columnDefs = list(list(width = '125px', targets = c(2:7)),list(className = 'dt-center', targets = c(2:7))),
-          scrollY = T,
-          initComplete = JS(
-            "function(settings, json) {",
-            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff','text-align': 'center'});",
-            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
-            "}"
-          )
-        )
-      ) |>
-        formatStyle(0, target= 'row', lineHeight='25%') |>
-        formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
-    })
-    
-    output$biomass_estimation_ui = renderUI({
-      fluidRow(
-        div(class = "custom-inline-elements",
-            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
-            div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
-            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
-            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
-        )
-      )
-    })
-    
   })
   
   observeEvent(input$count_calc, ignoreInit=T, {
     
     comm_numbers(input$fish_count)
-
+    rarity_value(input$rarity_parm)
+    
     data = EST_FISH_COMM()
-
+    
     species_abund = mapply(function(W, b, d) {
       W^(-(b - d))
     }, data$`Mean Weight (g)`, data$Thinning, data$`Thin Adjustment`)
     
     rarity_factors = data[,5]
-    adjusted_abund = species_abund*(1-0.111111*(rarity_factors-1))
+    base = rarity_value()
+    adjusted_abund = species_abund * (base^(rarity_factors - 1))*(1-0.111111*(rarity_factors-1))
     
     summed_abund = sum(adjusted_abund)
     
     rel_abund = adjusted_abund / summed_abund
     
-    species_count = rel_abund * input$fish_count
+    species_count = rel_abund * comm_numbers()
     species_biomass = (species_count * data$`Mean Weight (g)`) / 1000
     summed_biomass = sum(species_biomass)
-
+    
     if (summed_biomass < 0.1) {
       summed_biomass = round(summed_biomass, 3)
     } else if (summed_biomass < 1) {
@@ -2837,17 +2962,17 @@ server= function(input,output,session) {
     } else {
       summed_biomass = round(summed_biomass, 1)
     }
-
+    
     comm_biomass(summed_biomass)
-
+    
     data$Count = round(species_count,1)
     data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass, 3),ifelse(species_biomass < 1,round(species_biomass, 2),round(species_biomass, 1)))
     
     EST_FISH_COMM(data)
-
+    
     output$fish_community = DT::renderDataTable(server = T, {
       datatable(
-        data[,c(2:3,5:8,ncol(data)-1,ncol(data))],
+        data[,c(2:3,5:6,ncol(data)-1,ncol(data))],
         rownames = F,
         selection = list(
           selected = NULL,
@@ -2859,31 +2984,137 @@ server= function(input,output,session) {
           dom='t',
           autoWidth = T,
           pageLength = 200,
-          columnDefs = list(list(width = '125px', targets = c(2:7)),list(className = 'dt-center', targets = c(2:7))),
+          columnDefs = list(list(width = '125px', targets = c(2:5)),list(className = 'dt-center', targets = c(2:5))),
           scrollY = T,
           initComplete = JS(
             "function(settings, json) {",
-            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff','text-align': 'center'});",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff', 'text-align': 'center'});",
+            "$(this.api().columns().header()).eq(2).attr('data-toggle', 'tooltip').attr('data-html', 'true').attr('title', '1 = Very Common<br>10 = Very Rare');",
+            "$('th').tooltip({",
+            "  html: true,",
+            "  delay: { show: 0 },",
+            "  container: 'body'",
+            "});",
             "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
             "}"
           )
         )
       ) |>
-        formatStyle(0, target= 'row', lineHeight='25%') |>
+        formatStyle(0, target= 'row', lineHeight='50%') |>
         formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
     })
     
     output$biomass_estimation_ui = renderUI({
       fluidRow(
         div(class = "custom-inline-elements",
-            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-right: 15px !important;"),
+            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-left: 1px !important; margin-right: 8px !important;"),
             div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
-            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 15px !important; margin-right: 15px !important;"),
-            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate"))
+            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 8px !important; margin-right: 8px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate")),
+            div(numericInput(inputId = "rarity_parm", label = "Rarity Adjust", value = rarity_value(), min = 0.1, max=0.99,step=0.01),style= "width: 100px !important; margin-left: 20px !important;"),
         )
       )
     })
     
+  })
+  
+  observeEvent(input$biomass_calc, ignoreInit=T, {
+    
+    comm_biomass(input$biomass)
+    rarity_value(input$rarity_parm)
+
+    data = EST_FISH_COMM()
+
+    species_abund = mapply(function(W, b, d) {
+      W^(-(b - d))
+    }, data$`Mean Weight (g)`, data$Thinning, data$`Thin Adjustment`)
+    
+    rarity_factors = data[,5]
+    base = rarity_value()
+    adjusted_abund = species_abund * (base^(rarity_factors - 1))*(1-0.111111*(rarity_factors-1))
+    
+    summed_abund = sum(adjusted_abund)
+    rel_abund = adjusted_abund / summed_abund
+
+    error = 10
+    total_count = comm_numbers()
+
+    while (error > 1 || error < -1) {
+      
+      species_count = rel_abund * total_count
+
+      species_biomass = (species_count * data$`Mean Weight (g)`) / 1000
+
+      summed_biomass = sum(species_biomass)
+      summed_count = sum(species_count)
+      
+      mean_comm_weight = summed_biomass / summed_count
+      error = comm_biomass() - summed_biomass
+      error_number = round(error/mean_comm_weight,0)
+      
+      total_count = total_count + error_number
+    }
+
+    data$Count = round(species_count,1)
+    data$`Biomass (kg)` = ifelse(species_biomass < 0.1,round(species_biomass,3),ifelse(species_biomass < 1,round(species_biomass,2),round(species_biomass,1)))
+
+    comm_numbers(total_count)
+
+    EST_FISH_COMM(data)
+
+    output$fish_community = DT::renderDataTable(server = T, {
+      datatable(
+        data[,c(2:3,5:6,ncol(data)-1,ncol(data))],
+        rownames = F,
+        selection = list(
+          selected = NULL,
+          target = "row",
+          mode = "single"
+        ),
+        editable = F,
+        options = list(
+          dom='t',
+          autoWidth = T,
+          pageLength = 200,
+          columnDefs = list(list(width = '125px', targets = c(2:5)),list(className = 'dt-center', targets = c(2:5))),
+          scrollY = T,
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#073744', 'color': '#fff', 'text-align': 'center'});",
+            "$(this.api().columns().header()).eq(2).attr('data-toggle', 'tooltip').attr('data-html', 'true').attr('title', '1 = Very Common<br>10 = Very Rare');",
+            "$('th').tooltip({",
+            "  html: true,",
+            "  delay: { show: 0 },",
+            "  container: 'body'",
+            "});",
+            "Shiny.setInputValue('tableRendered', 'data', {priority: 'event'});",
+            "}"
+          )
+        )
+      ) |>
+        formatStyle(0, target= 'row', lineHeight='50%') |>
+        formatStyle(columns = c(3:ncol(data)),textAlign = 'center')
+    })
+    
+    output$biomass_estimation_ui = renderUI({
+      fluidRow(
+        div(class = "custom-inline-elements",
+            div(numericInput(inputId = "fish_count", label = "Fish Count", value = comm_numbers(), min = 100,step=100),style= "width: 130px !important; margin-left: 1px !important; margin-right: 8px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "count_calc", label = "Calculate")),
+            div(numericInput(inputId = "biomass", label = "Biomass (kg)", value = comm_biomass(), min = 10,step=10),style= "width: 120px !important; margin-left: 8px !important; margin-right: 8px !important;"),
+            div(class = "custom-action-button",actionButton(inputId = "biomass_calc", label = "Calculate")),
+            div(numericInput(inputId = "rarity_parm", label = "Rarity Adjust", value = rarity_value(), min = 0.1, max=0.99,step=0.01),style= "width: 100px !important; margin-left: 20px !important;"),
+        )
+      )
+    })
+    
+  })
+  
+  observeEvent(c(input$rarity_parm,input$fish_count,input$biomass,input$count_calc,input$biomass_calc), {
+    addTooltip(session, id = "rarity_parm", 
+               title = "Smaller values will influence species abundance more drastically",
+               placement = "top", 
+               trigger = "hover")
   })
   
   observeEvent(input$fish_community_rows_selected, ignoreInit=T, {
