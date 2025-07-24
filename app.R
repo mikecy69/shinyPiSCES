@@ -43,8 +43,6 @@ library(DT)
 
 source("app_variables.R")
 source("ui.R")
-# source("global_functions.R")
-# source("calculate_probs.R")
 
 server= function(input,output,session) {
   
@@ -77,31 +75,31 @@ server= function(input,output,session) {
     return(probabilities)
   }
   
-  # show_stack <- function() {
-  #   cat("#----- Stack containing call to show_stack -----#\n\n")
-  #   x <- sys.calls()
-  #   lapply(head(x, -1), function(x) {print(x); cat("\n")})
-  #   cat("#-----------------------------------------------#\n\n")
-  # }
+  show_stack <- function() {
+     cat("#----- Stack containing call to show_stack -----#\n\n")
+     x <- sys.calls()
+     lapply(head(x, -1), function(x) {print(x); cat("\n")})
+     cat("#-----------------------------------------------#\n\n")
+  }
 
   # Code to show what libraries are in use by the project
-  # funcs =
-  #   list.files(here::here(), pattern ="\\.R$", recursive = TRUE, full.names = TRUE) |>
-  #   map(list.functions.in.file) |>
-  #   flatten
+  funcs =
+     list.files(here::here(), pattern ="\\.R$", recursive = TRUE, full.names = TRUE) |>
+     map(list.functions.in.file) |>
+     flatten
   
   # Extract just the unique package names
-  # packages <-
-  #   funcs |>
-  #   names |>
-  #   str_extract("package:[[:alnum:]]*") |>
-  #   str_split(",") |>
-  #   unlist |>
-  #   str_remove("package:") |>
-  #   unique |>
-  #   sort
-  # 
-  # print(packages)
+  packages <-
+     funcs |>
+     names |>
+     str_extract("package:[[:alnum:]]*") |>
+     str_split(",") |>
+     unlist |>
+     str_remove("package:") |>
+     unique |>
+     sort
+  
+  print(packages)
 
   output$map = renderLeaflet({
     leaflet() |>
@@ -1416,13 +1414,17 @@ server= function(input,output,session) {
     }
     
     filtered_data = filtered_data[filtered_data$Rarity >= input$rarity_slider[1] & filtered_data$Rarity <= input$rarity_slider[2],]
-    filtered_data = filtered_data[filtered_data$Max_Age >= input$max_age[1] & filtered_data$Max_Age <= input$max_age[2],]
     filtered_data = filtered_data[filtered_data$Girth_Index >= input$girth_slider[1] & filtered_data$Girth_Index <= input$girth_slider[2],]
-    
     filtered_data = filtered_data[filtered_data$Mean_Weight >= input$lower_mean_weight & filtered_data$Mean_Weight <= input$upper_mean_weight,]
     
-    if (input$mean_length[2] == 40) {
-      filtered_data = filtered_data[filtered_data$Mean_Length >= input$mean_length[1] & filtered_data$Mean_Length <= 201,]
+    if (input$max_age[2] == 25) {
+      filtered_data = filtered_data[filtered_data$Max_Age >= input$max_age[1] & filtered_data$Max_Age <= 70,]
+    } else {
+      filtered_data = filtered_data[filtered_data$Max_Age >= input$max_age[1] & filtered_data$Max_Age <= input$max_age[2],]
+    }
+    
+    if (input$mean_length[2] == 75) {
+      filtered_data = filtered_data[filtered_data$Mean_Length >= input$mean_length[1] & filtered_data$Mean_Length <= 225,]
     } else {
       filtered_data = filtered_data[filtered_data$Mean_Length >= input$mean_length[1] & filtered_data$Mean_Length <= input$mean_length[2],]
     }
@@ -1507,7 +1509,7 @@ server= function(input,output,session) {
     updateSliderInput(session, "max_age", value = c(1,25))
     updateNumericInput(session, "lower_mean_weight", value = 0)
     updateNumericInput(session, "upper_mean_weight", value = 200000)
-    updateSliderInput(session, "mean_length", value = c(0,40))
+    updateSliderInput(session, "mean_length", value = c(0,75))
     updateSliderInput(session, "max_TL", value = c(0,200))
     updateSliderInput(session, "girth_slider", value = c(0,1))
     updateSliderInput(session, "ubiquity_slider", value = c(0,75))

@@ -26,7 +26,7 @@ DataExplPanel = sidebarLayout(
                   column(4,sliderInput(inputId = "max_age",label = "Max Age (yr)",min = 1,max = 25,value = c(1,25))),
                   column(4,sliderInput(inputId = "max_TL",label = "Max Total Length (cm)",min = 0,max = 200,value = c(0,200), step=5))),
             
-            fluidRow(column(4,sliderInput(inputId = "mean_length",label = "Mean Length (cm)",min = 0,max = 40,value = c(0,40), step=1)),
+            fluidRow(column(4,sliderInput(inputId = "mean_length",label = "Mean Length (cm)",min = 0,max = 75,value = c(0,75), step=1)),
                      column(4,tags$div(style = "text-align: center; font-weight: bold;","Lower/Upper Mean Weight (g)"),
                             fluidRow(column(6,div(style = "display: flex; justify-content: flex-end; margin-right: -10px;",
                                         numericInput(inputId = "lower_mean_weight",label = NULL,value = 0, min = 0, max = 100000, step = 1))),
