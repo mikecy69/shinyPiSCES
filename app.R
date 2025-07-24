@@ -1,21 +1,11 @@
 library(bslib)
 library(bsplus)
-# library(cachem)
 library(dplyr)
-library(ggdist)
-library(ggplot2)
-library(glmnetUtils)
-library(grid)
-library(hash)
 library(httr)
 library(jsonlite)
-library(later)
 library(leaflet)
 library(lubridate)
 library(Matrix)
-# library(memoise)
-library(plyr)
-library(rlang)
 library(RSQLite)
 library(sf)
 library(SHAPforxgboost)
@@ -23,13 +13,24 @@ library(shiny)
 library(shinyBS)
 library(shinyjs)
 library(shinythemes)
-library(shinyvalidate)
 library(shinyWidgets)
 library(stringr)
-library(tidyverse)
-library(tools)
 library(xgboost)
 library(DT)
+
+# library(cachem)
+# library(ggdist)
+# library(glmnetUtils)
+# library(ggplot2)
+# library(grid)
+# library(hash)
+# library(later)
+# library(memoise)
+# library(plyr)
+# library(rlang)
+# library(shinyvalidate)
+# library(tidyverse)
+# library(tools)
 
 # library(NCmisc)
 # library(here)
@@ -75,31 +76,29 @@ server= function(input,output,session) {
     return(probabilities)
   }
   
-  show_stack <- function() {
-     cat("#----- Stack containing call to show_stack -----#\n\n")
-     x <- sys.calls()
-     lapply(head(x, -1), function(x) {print(x); cat("\n")})
-     cat("#-----------------------------------------------#\n\n")
-  }
+  # show_stack = function() {
+  #    cat("#----- Stack containing call to show_stack -----#\n\n")
+  #    x = sys.calls()
+  #    lapply(head(x, -1), function(x) {print(x); cat("\n")})
+  #    cat("#-----------------------------------------------#\n\n")
+  # }
 
   # Code to show what libraries are in use by the project
-  funcs =
-     list.files(here::here(), pattern ="\\.R$", recursive = TRUE, full.names = TRUE) |>
-     map(list.functions.in.file) |>
-     flatten
+  # funcs = list.files(here::here(), pattern ="\\.R$", recursive = TRUE, full.names = TRUE) |>
+  #    map(list.functions.in.file) |>
+  #    flatten()
   
   # Extract just the unique package names
-  packages <-
-     funcs |>
-     names |>
-     str_extract("package:[[:alnum:]]*") |>
-     str_split(",") |>
-     unlist |>
-     str_remove("package:") |>
-     unique |>
-     sort
+  # packages <- funcs |>
+  #   names() |>
+  #   str_extract("package:[[:alnum:]]*") |>
+  #   str_split(",") |>
+  #   unlist() |>
+  #   str_remove("package:") |>
+  #   unique() |>
+  #   sort()
   
-  print(packages)
+  # print(packages)
 
   output$map = renderLeaflet({
     leaflet() |>
