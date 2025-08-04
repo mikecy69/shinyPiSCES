@@ -97,7 +97,7 @@ ui = fluidPage(
       box-sizing: border-box;
     }
     
-    #fish_length, #fish_weight, #calc_lw, #fish_count, #biomass {
+    #fish_length, #fish_weight, #calc_lw, #growth_plot, #fish_count, #biomass {
       height: 35px;
     }
     

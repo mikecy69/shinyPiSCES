@@ -1,6 +1,7 @@
 library(bslib)
 library(bsplus)
 library(dplyr)
+library(ggplot2)
 library(httr)
 library(jsonlite)
 library(leaflet)
@@ -21,7 +22,7 @@ library(DT)
 # library(cachem)
 # library(ggdist)
 # library(glmnetUtils)
-# library(ggplot2)
+
 # library(grid)
 # library(hash)
 # library(later)
@@ -99,6 +100,10 @@ server= function(input,output,session) {
   #   sort()
   
   # print(packages)
+  
+  if (st_crs(HUC_boundaries)$epsg != 4326) {
+    HUC_boundaries = st_transform(HUC_boundaries, crs = 4326)
+  }
 
   output$map = renderLeaflet({
     leaflet() |>
@@ -107,7 +112,7 @@ server= function(input,output,session) {
   })
   
   output$stream_map = renderLeaflet({
-    leaflet() %>%
+    leaflet() |>
       addTiles() |>
       setView(lng = -96, lat = 37, zoom = 5)
   })
@@ -126,8 +131,8 @@ server= function(input,output,session) {
     HTML(paste0(
       "<br>",
       "<div style='background-color: lightgreen; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>OK Stream Width and Occurrence Probability</div>",
-      "<div style='background-color: #C8D2DC; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Stream Width</div>",
       "<div style='background-color: white; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>No Occurrence Model</div>",
+      "<div style='background-color: #C8D2DC; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Stream Width</div>",
       "<div style='background-color: #8C96A0; color: black; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Low Occurrence Probability</div>",
       "<div style='background-color: #505A64; color: white; font-size: 14px; padding: 5px; margin-bottom: 3px;'>Unlikely Width and Low Probability</div>"
     ))
@@ -160,10 +165,6 @@ server= function(input,output,session) {
   output$zoom_level = renderText({
     input$map_zoom
   })
-  
-  if (st_crs(HUC_boundaries)$epsg != 4326) {
-    HUC_boundaries = st_transform(HUC_boundaries, crs = 4326)
-  }
   
   debounced_search_name = debounce(reactive(input$searchName), 300)
   debounced_search_HUC = debounce(reactive(input$searchHUC), 300)
@@ -1813,8 +1814,11 @@ server= function(input,output,session) {
           ),
           div(style = "display: inline-block; vertical-align: center; margin-left: 10px;",
               div(style = "display: block; width: 75px !important; margin-top: 25px;", actionButton("calc_lw", "Calculate", style = "line-height: 0px; text-align: center;")),
-              div(style = "display: block; width: 75px !important; margin-top: 25px;", 
+              div(style = "display: block; width: 75px !important; margin-top: 25px;",
                   radioButtons("unit_toggle", "", choices = c("Metric" = "metric", "English" = "english"), selected = units(), inline = FALSE))
+          ),
+          div(style = "display: inline-block; vertical-align: top; margin-left: 25px;",
+              div(style = "display: block; width: 75px !important; margin-top: 25px;",actionButton("growth_plot", "Growth Curve", style = "line-height: 0px; text-align: center;"))
           )
         )
       })
@@ -1842,15 +1846,153 @@ server= function(input,output,session) {
       })
       
       search_string = paste(filtered_fish_props$Genus,filtered_fish_props$Species)
+      genus = filtered_fish_props$Genus
+      species = filtered_fish_props$Species
       wiki_link = sprintf('<a href="https://en.wikipedia.org/wiki/%s" target="_blank">Wikipedia</a>',URLencode(search_string))
       google_link = sprintf('<a href="https://www.google.com/search?tbm=isch&q=%s" target="_blank">Google Images</a>',URLencode(search_string))
+      fishbase_link = sprintf('<a href = "https://www.fishbase.org/summary/%s_%s.html" target="_blank">FishBase</a>',genus,species)
       
       output$species_links = renderUI({
         tagList(
           div(style = "display: inline-block; margin-right: 20px;", HTML(wiki_link)),
-          div(style = "display: inline-block;", HTML(google_link))
+          div(style = "display: inline-block; margin-right: 20px;", HTML(google_link)),
+          div(style = "display: inline-block;", HTML(fishbase_link))
         )
       })
+    }
+  })
+  
+  observeEvent(input$growth_plot, ignoreInit = TRUE, {
+    
+    selected_row_index = input$explore_results_rows_selected
+    selected_common_name = explore_results()[selected_row_index, "Common_Name"]
+    filtered_fish_props = fish_props[fish_props$Common_Name == selected_common_name, ]
+    
+    a = A()
+    b = B()
+    max_length = filtered_fish_props$`Max_Length`[1]
+    mean_length = filtered_fish_props$`Mean_Length`[1]
+    
+    lengths = seq(0, max_length, by = max_length/25)
+    weights = a*lengths^b
+    mean_weight = a*mean_length^b
+    
+    if (units() == "english") {
+      
+      mean_length_english = mean_length/2.54
+      mean_weight_english = mean_weight*0.002205
+      
+      lengths_english = lengths/2.54
+      weights_english = weights*0.002205
+      
+      if (mean_weight_english < 1) {
+        
+        weights_english = weights_english*16*437.5
+        mean_weight_english = mean_weight_english*16*437.5
+        plot_data = data.frame(Length = lengths_english, Weight = weights_english)
+        
+        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
+          geom_line() +
+          annotate("point", x = mean_length_english, y = mean_weight_english, color = "black", fill = "cadetblue", size = 3, shape = 21) +
+          annotate("text", x = mean_length_english, y = mean_weight_english, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
+          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (in)", y = "Weight (grains)") +
+          theme_minimal() +
+          theme(
+            plot.title = element_text(size = 16, face = "bold"),
+            axis.title.x = element_text(size = 14),
+            axis.title.y = element_text(size = 14),
+            axis.text = element_text(size = 12)
+          )
+        
+        showModal(modalDialog(
+          plotOutput("growth_plot"),
+          easyClose = TRUE
+        ))
+        
+        output$growth_plot = renderPlot({ growth_plot })
+        
+      } else {
+        
+        plot_data = data.frame(Length = lengths_english, Weight = weights_english)
+        
+        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
+          geom_line() +
+          annotate("point", x = mean_length_english, y = mean_weight_english, color = "black", fill = "cadetblue", size = 3, shape = 21) +
+          annotate("text", x = mean_length_english, y = mean_weight_english, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
+          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (in)", y = "Weight (lbs)") +
+          theme_minimal() +
+          theme(
+            plot.title = element_text(size = 16, face = "bold"),
+            axis.title.x = element_text(size = 14),
+            axis.title.y = element_text(size = 14),
+            axis.text = element_text(size = 12)
+          )
+        
+        showModal(modalDialog(
+          plotOutput("growth_plot"),
+          easyClose = TRUE
+        ))
+        
+        output$growth_plot = renderPlot({ growth_plot })
+      }
+      
+    } else {
+      
+      lengths = seq(0, max_length, by = max_length/25)
+      weights = a*lengths^b
+      mean_weight = a*mean_length^b
+      
+      if (mean_weight > 2000) {
+        
+        weights = weights/1000
+        mean_weight = mean_weight/1000
+        
+        plot_data = data.frame(Length = lengths, Weight = weights)
+        
+        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
+          geom_line() +
+          annotate("point", x = mean_length, y = mean_weight, color = "black", fill = "cadetblue", size = 3, shape = 21) +
+          annotate("text", x = mean_length, y = mean_weight, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
+          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (cm)", y = "Weight (kg)") +
+          theme_minimal() +
+          theme(
+            plot.title = element_text(size = 16, face = "bold"),
+            axis.title.x = element_text(size = 14),
+            axis.title.y = element_text(size = 14),
+            axis.text = element_text(size = 12)
+          )
+        
+        showModal(modalDialog(
+          plotOutput("growth_plot"),
+          easyClose = TRUE
+        ))
+        
+        output$growth_plot = renderPlot({ growth_plot })
+        
+      } else {
+        
+        plot_data = data.frame(Length = lengths, Weight = weights)
+        
+        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
+          geom_line() +
+          annotate("point", x = mean_length, y = mean_weight, color = "black", fill = "cadetblue", size = 3, shape = 21) +
+          annotate("text", x = mean_length, y = mean_weight, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
+          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (cm)", y = "Weight (g)") +
+          theme_minimal() +
+          theme(
+            plot.title = element_text(size = 16, face = "bold"),
+            axis.title.x = element_text(size = 14),
+            axis.title.y = element_text(size = 14),
+            axis.text = element_text(size = 12)
+          )
+        
+        showModal(modalDialog(
+          plotOutput("growth_plot"),
+          easyClose = TRUE
+        ))
+        
+        output$growth_plot = renderPlot({ growth_plot })
+      }
     }
   })
   
@@ -1971,9 +2113,9 @@ server= function(input,output,session) {
     # stream_HUC(feature_HUC)
     # stream_NAME(feature_name)
     # 
-    # leafletProxy("stream_map") %>%
-    #   clearShapes() %>%
-    #   addTiles() %>%
+    # leafletProxy("stream_map") |>
+    #   clearShapes() |>
+    #   addTiles() |>
     #   addPolygons(data = selected_stream, color = "blue", weight = 2, opacity = 1)
     # 
     # output$segment_info = renderUI({
@@ -2694,7 +2836,7 @@ server= function(input,output,session) {
     
     which_rows = STREAM_fishes()[input$fish_assem_rows_selected,]
     
-    rows_to_add = which_rows %>%
+    rows_to_add = which_rows |>
       anti_join(filtered_STREAM_fishes(), by = c("Scientific Name" = "Scientific Name"))
     
     updated_filtered = bind_rows(filtered_STREAM_fishes(), rows_to_add)
@@ -3343,13 +3485,17 @@ server= function(input,output,session) {
       })
       
       search_string = paste(selected_fish_props$Genus,selected_fish_props$Species)
+      genus = selected_fish_props$Genus
+      species = selected_fish_props$Species
       wiki_link = sprintf('<a href="https://en.wikipedia.org/wiki/%s" target="_blank">Wikipedia</a>',URLencode(search_string))
       google_link = sprintf('<a href="https://www.google.com/search?tbm=isch&q=%s" target="_blank">Google Images</a>',URLencode(search_string))
+      fishbase_link = sprintf('<a href = "https://www.fishbase.org/summary/%s_%s.html" target="_blank">FishBase</a>',genus,species)
       
       output$fishy_links = renderUI({
         tagList(
           div(style = "display: inline-block; margin-right: 20px;", HTML(wiki_link)),
-          div(style = "display: inline-block;", HTML(google_link))
+          div(style = "display: inline-block; margin-right: 20px;", HTML(google_link)),
+          div(style = "display: inline-block;", HTML(fishbase_link))
         )
       })
     }
