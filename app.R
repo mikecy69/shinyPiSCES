@@ -1511,7 +1511,7 @@ server= function(input,output,session) {
     updateNumericInput(session, "upper_mean_weight", value = 200000)
     updateSliderInput(session, "mean_length", value = c(0,75))
     updateSliderInput(session, "max_TL", value = c(0,200))
-    updateSliderInput(session, "girth_slider", value = c(0,1))
+    updateSliderInput(session, "girth_slider", value = c(0,1.5))
     updateSliderInput(session, "ubiquity_slider", value = c(0,75))
     updateSliderInput(session, "extent_slider", value = c(0,80))
     updateSliderInput(session, "tolerance_slider", value = c(0,95))
@@ -1875,125 +1875,77 @@ server= function(input,output,session) {
     
     lengths = seq(0, max_length, by = max_length/25)
     weights = a*lengths^b
+    typical_weights = 0.01*lengths^3.04
     mean_weight = a*mean_length^b
     
     if (units() == "english") {
       
-      mean_length_english = mean_length/2.54
-      mean_weight_english = mean_weight*0.002205
+      mean_length = mean_length/2.54
+      mean_weight = mean_weight*0.002205
       
-      lengths_english = lengths/2.54
-      weights_english = weights*0.002205
+      mean_grains = mean_weight*7000
       
-      if (mean_weight_english < 1) {
+      lengths = lengths/2.54
+      weights = weights*0.002205
+      typical_weights = typical_weights*0.002205
+      x_label = "Length (in)"
+      
+      if (mean_grains < 250) {
         
-        weights_english = weights_english*16*437.5
-        mean_weight_english = mean_weight_english*16*437.5
-        plot_data = data.frame(Length = lengths_english, Weight = weights_english)
-        
-        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
-          geom_line() +
-          annotate("point", x = mean_length_english, y = mean_weight_english, color = "black", fill = "cadetblue", size = 3, shape = 21) +
-          annotate("text", x = mean_length_english, y = mean_weight_english, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
-          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (in)", y = "Weight (grains)") +
-          theme_minimal() +
-          theme(
-            plot.title = element_text(size = 16, face = "bold"),
-            axis.title.x = element_text(size = 14),
-            axis.title.y = element_text(size = 14),
-            axis.text = element_text(size = 12)
-          )
-        
-        showModal(modalDialog(
-          plotOutput("growth_plot"),
-          easyClose = TRUE
-        ))
-        
-        output$growth_plot = renderPlot({ growth_plot })
+        weights = weights*16*437.5
+        typical_weights = typical_weights*16*437.5
+        mean_weight = mean_weight*16*437.5
+        plot_data = data.frame(Length = lengths, Weight = weights, Typical_Weight = typical_weights)
+        y_label = "Weight (grains)"
         
       } else {
         
-        plot_data = data.frame(Length = lengths_english, Weight = weights_english)
-        
-        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
-          geom_line() +
-          annotate("point", x = mean_length_english, y = mean_weight_english, color = "black", fill = "cadetblue", size = 3, shape = 21) +
-          annotate("text", x = mean_length_english, y = mean_weight_english, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
-          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (in)", y = "Weight (lbs)") +
-          theme_minimal() +
-          theme(
-            plot.title = element_text(size = 16, face = "bold"),
-            axis.title.x = element_text(size = 14),
-            axis.title.y = element_text(size = 14),
-            axis.text = element_text(size = 12)
-          )
-        
-        showModal(modalDialog(
-          plotOutput("growth_plot"),
-          easyClose = TRUE
-        ))
-        
-        output$growth_plot = renderPlot({ growth_plot })
+        plot_data = data.frame(Length = lengths, Weight = weights, Typical_Weight=typical_weights)
+        y_label = "Weight (lbs)"
       }
       
     } else {
       
-      lengths = seq(0, max_length, by = max_length/25)
-      weights = a*lengths^b
-      mean_weight = a*mean_length^b
+      x_label = "Length (cm)"
       
-      if (mean_weight > 2000) {
+      if (mean_weight > 1000) {
         
         weights = weights/1000
         mean_weight = mean_weight/1000
-        
-        plot_data = data.frame(Length = lengths, Weight = weights)
-        
-        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
-          geom_line() +
-          annotate("point", x = mean_length, y = mean_weight, color = "black", fill = "cadetblue", size = 3, shape = 21) +
-          annotate("text", x = mean_length, y = mean_weight, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
-          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (cm)", y = "Weight (kg)") +
-          theme_minimal() +
-          theme(
-            plot.title = element_text(size = 16, face = "bold"),
-            axis.title.x = element_text(size = 14),
-            axis.title.y = element_text(size = 14),
-            axis.text = element_text(size = 12)
-          )
-        
-        showModal(modalDialog(
-          plotOutput("growth_plot"),
-          easyClose = TRUE
-        ))
-        
-        output$growth_plot = renderPlot({ growth_plot })
+        typical_weights = typical_weights/1000
+        plot_data = data.frame(Length = lengths, Weight = weights, Typical_Weight = typical_weights)
+        y_label = "Weight (kg)"
         
       } else {
         
-        plot_data = data.frame(Length = lengths, Weight = weights)
-        
-        growth_plot = ggplot(plot_data, aes(x = Length, y = Weight)) +
-          geom_line() +
-          annotate("point", x = mean_length, y = mean_weight, color = "black", fill = "cadetblue", size = 3, shape = 21) +
-          annotate("text", x = mean_length, y = mean_weight, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
-          labs(title = paste(selected_common_name, "Growth Curve"), x = "Length (cm)", y = "Weight (g)") +
-          theme_minimal() +
-          theme(
-            plot.title = element_text(size = 16, face = "bold"),
-            axis.title.x = element_text(size = 14),
-            axis.title.y = element_text(size = 14),
-            axis.text = element_text(size = 12)
-          )
-        
-        showModal(modalDialog(
-          plotOutput("growth_plot"),
-          easyClose = TRUE
-        ))
-        
-        output$growth_plot = renderPlot({ growth_plot })
+        plot_data = data.frame(Length = lengths, Weight = weights, Typical_Weight = typical_weights)
+        y_label = "Weight (g)"
       }
     }
+      
+    growth_plot = ggplot() +
+      geom_line(data = plot_data, aes(x = Length, y = Weight, color = selected_common_name, linetype = selected_common_name)) +
+      geom_line(data = plot_data, aes(x = Length, y = Typical_Weight, color = "Archetypical Fish", linetype = "Archetypical Fish")) +
+      annotate("point", x = mean_length, y = mean_weight, color = "black", fill = "cadetblue", size = 3, shape = 21) +
+      annotate("text", x = mean_length, y = mean_weight, label = "Mean Length/Weight", vjust = -1, hjust = 1, color = "black", size = 5) +
+      labs(x = x_label, y = y_label) +
+      scale_color_manual(name = "Weight at Size", values = setNames(c("blue", "black"), c(selected_common_name, "Archetypical Fish"))) +
+      scale_linetype_manual(name = "Weight at Size", values = setNames(c("solid", "dashed"), c(selected_common_name, "Archetypical Fish"))) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 16, face = "bold"),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = "bottom",
+        legend.direction = "vertical"
+      )
+    
+    showModal(modalDialog(plotOutput("growth_plot"),easyClose = TRUE, size="l"))
+    
+    output$growth_plot = renderPlot({ growth_plot })
   })
   
   observeEvent(input$calc_lw, ignoreInit = TRUE, {

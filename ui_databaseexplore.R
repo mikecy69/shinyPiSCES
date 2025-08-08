@@ -32,7 +32,7 @@ DataExplPanel = sidebarLayout(
                                         numericInput(inputId = "lower_mean_weight",label = NULL,value = 0, min = 0, max = 100000, step = 1))),
                                     column(6,div(style = "display: flex; justify-content: flex-start; margin-left: -10px;",
                                         numericInput(inputId = "upper_mean_weight",label = NULL,value = 200000, min = 0, max = 200000, step = 1))))),
-                     column(4,sliderInput(inputId = "girth_slider",label = "Girth Index",min = 0,max = 1,value = c(0,1), step=0.01))),
+                     column(4,sliderInput(inputId = "girth_slider",label = "Girth Index",min = 0,max = 1.5,value = c(0,1.5), step=0.02))),
             
             fluidRow(column(12,
               div(

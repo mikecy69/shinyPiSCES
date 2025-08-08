@@ -21,7 +21,7 @@ ui = fluidPage(
   
   bsTooltip(id = "mean_width", title = "Mean stream width: 75% of estimated bankfull width", placement = "top", trigger = "hover"),
   
-  bsTooltip(id = "girth_slider", title = "A relative measure of weight at a standard size. 0:very light 1:very heavy", placement = "top", trigger = "hover"),
+  bsTooltip(id = "girth_slider", title = "A relative index of body shape/weight at size; 0.25 = elongated, 0.5 = fusiform, 1.0 = deep bodied; 1.5 = heavy bodied", placement = "top", trigger = "hover"),
   
   bsTooltip(id = "watershed_integrity", title = "Index of Watershed Integrity", placement = "top", trigger = "hover"),
   
@@ -54,6 +54,8 @@ ui = fluidPage(
       transform: translate(-50%, -50%);
       display: none;
     }
+    
+
     
     .custom-input {
       text-align: center;

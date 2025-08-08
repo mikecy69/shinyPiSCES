@@ -45,7 +45,7 @@ fish_tribes = list(
     "Trout-Perch",
     "White Bass",
     "Whitefish"),
-    "Oddballs" = c("Anchovy","Bowfin","Burbot","Cod","Drum","Eel","Flounder","Knifefish","Loach","Mullet","Paddlefish","Skipjack","Stingray","Surfperch","Tetra"))
+    "Oddballs" = c("Anchovy","Bowfin","Burbot","Cod","Drum","Eel","Flatfish","Knifefish","Loach","Mullet","Paddlefish","Skipjack","Stingray","Surfperch","Tetra"))
 
 systems = c("Cave",
             "Spring",
